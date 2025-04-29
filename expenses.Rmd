@@ -1,0 +1,139 @@
+---
+title: "<center>Donofrio Expenses</center>"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.width=8, fig.align = "center")
+
+library(tidyverse)
+library(googlesheets4)
+library(DT)
+# library(fable)
+
+gs4_auth(email = "80donofrio@gmail.com")
+theme_update(plot.title = element_text(hjust = 0.5), 
+             plot.subtitle = element_text(hjust = 0.5))
+```
+
+# Groceries
+
+```{r grocery-data, include=FALSE}
+grocery_sheet <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
+                            range = "Groceries")
+grocery <- grocery_sheet %>% 
+  arrange(date) %>% 
+  mutate(store = as.factor(store),
+         cost_per_item = cost / items,
+         week = floor_date(date, unit = "week"),
+         total = 0)
+grocery$total[1] <- grocery$cost[1]
+for (i in c(2:nrow(grocery))) {
+  grocery$total[i] <- grocery$cost[i] + grocery$total[i - 1]
+}
+
+grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
+```
+
+## Grocery Expenses over Time
+From 01/09/2025 (when we started tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
+
+```{r grocery-plot}
+grocery2025 %>% 
+  ggplot(aes(x = week, y = cost)) +
+  geom_col(aes(fill = store)) +
+  geom_hline(yintercept = mean(summarize(group_by(grocery2025, week), 
+                                         cost = sum(cost),
+                                         .groups = "drop")$cost),
+             linetype = "dashed", linewidth = 1.5) +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Grocery Expenses by Week",
+       x = "Week",
+       y = "Expenditure ($)",
+       fill = "Store")
+
+grocery2025 %>% 
+  group_by(week, store) %>% 
+  summarize(mean_cost_per_item = sum(cost) / sum(items),
+            .groups = "drop") %>% 
+  ggplot(aes(x = week, y = mean_cost_per_item)) +
+  geom_col(aes(fill = store), position = "dodge") +
+  geom_hline(yintercept = weighted.mean(grocery2025$cost_per_item, 
+                                        grocery2025$items),
+             linetype = "dashed", linewidth = 1.5) +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Average Item Cost by Week",
+       x = "Week",
+       y = "Mean Item Cost ($)",
+       fill = "Store")
+```
+
+The plot above shows that Giant typically has a slightly higher average cost per item than Trader Joe's (note that the mean line is based on the cost per item across all stores since 01/09/2025). Wegmans is typically a bit higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), making it the preferred store for purchasing those.
+
+Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
+
+```{r grocery-stores-month}
+grocery2025 %>% 
+  mutate(month = month(date, label = TRUE)) %>% 
+  group_by(month) %>% 
+  mutate(monthly_total = sum(cost)) %>% 
+  ggplot(aes(x = month, y = cost)) +
+  geom_col(aes(fill = store)) +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Grocery Expenses by Month",
+       x = "Month",
+       y = "Expenditure ($)",
+       fill = "Store")
+```
+
+## Grocery Expenses by Store
+For the store analysis, we include the inconsistent receipts saved prior to 01/09/2025. The table is sorted in descending order by number of trips.
+
+```{r grocery-stores-week}
+grocery %>% 
+  group_by(store) %>% 
+  summarize(trips = n(), mean_items = format(round(mean(items), 2), nsmall = 2),
+            mean_cost = format(round(mean(cost), 2), nsmall = 2), 
+            mean_cost_per_item = format(round(sum(cost) / sum(items), 2), nsmall = 2),
+            # Remove standard deviation of cost?
+            sd_cost = format(round(sd(cost), 2), nsmall = 2), 
+            min_cost = format(min(cost), nsmall = 2), 
+            max_cost = format(max(cost), nsmall = 2)) %>% 
+  arrange(desc(trips)) %>% 
+  datatable()
+
+grocery %>% 
+  ggplot(aes(x = store, y = cost)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Expenditures by Store",
+       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
+                         format(max(grocery$date), "%m/%d/%Y")),
+       x = "Store", 
+       y = "Expenditure ($)")
+```
+
+Trips to Wegmans tend to be larger expenditures than Giant, or Trader Joe's. Giant is typically the place we run to for one or two emergency items, which in the small lower quartile.
+
+We will now plot the ratio of number of items and cost.
+
+```{r item-cost-scatterplot}
+grocery %>% 
+  ggplot(aes(x = items, y = cost, col = store)) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 1, slope = sum(grocery$cost) / sum(grocery$items), 
+              linetype = "dashed", linewidth = 1) +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Grocery Stores by Average Item Cost",
+       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
+                         format(max(grocery$date), "%m/%d/%Y")),
+       caption = "Note: the dashed line is the overall average cost per item",
+       x = "Number of Items Purchased",
+       y = "Expenditure ($)",
+       col = "Store") +
+  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.75), 
+        plot.caption = element_text(hjust = 0))
+```
+
+The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 1 item, slope = mean cost). The three main stores all share a similar slope, though Wegmans is shifted higher (see previous commentary on mean item cost), while Trader Joe's is shifted lower and has a slightly shallower slope.
