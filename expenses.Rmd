@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, fig.width=8, fig.align = "center")
+knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
 library(googlesheets4)
@@ -26,22 +26,22 @@ grocery <- grocery_sheet %>%
   mutate(store = as.factor(store),
          cost_per_item = cost / items,
          week = floor_date(date, unit = "week"),
-         total = 0)
-grocery$total[1] <- grocery$cost[1]
-for (i in c(2:nrow(grocery))) {
-  grocery$total[i] <- grocery$cost[i] + grocery$total[i - 1]
-}
-
+         month = floor_date(date, unit = "month")) %>% 
+  group_by(store) %>% 
+  mutate(store_label = as.factor(ifelse(n() < 3, "Other", as.character(store)))) %>% 
+  ungroup()
+grocery$store_label = factor(grocery$store_label, levels = c(levels(grocery$store_label)[2:nlevels(grocery$store_label)], 
+                                                             "Other"))
 grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
 ```
 
 ## Grocery Expenses over Time
 From 01/09/2025 (when we started tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
-```{r grocery-plot}
+```{r grocery-week}
 grocery2025 %>% 
   ggplot(aes(x = week, y = cost)) +
-  geom_col(aes(fill = store)) +
+  geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean(summarize(group_by(grocery2025, week), 
                                          cost = sum(cost),
                                          .groups = "drop")$cost),
@@ -53,11 +53,11 @@ grocery2025 %>%
        fill = "Store")
 
 grocery2025 %>% 
-  group_by(week, store) %>% 
+  group_by(week, store_label) %>% 
   summarize(mean_cost_per_item = sum(cost) / sum(items),
             .groups = "drop") %>% 
   ggplot(aes(x = week, y = mean_cost_per_item)) +
-  geom_col(aes(fill = store), position = "dodge") +
+  geom_col(aes(fill = store_label), position = "dodge") +
   geom_hline(yintercept = weighted.mean(grocery2025$cost_per_item, 
                                         grocery2025$items),
              linetype = "dashed", linewidth = 1.5) +
@@ -66,24 +66,50 @@ grocery2025 %>%
        x = "Week",
        y = "Mean Item Cost ($)",
        fill = "Store")
+
+grocery2025 %>% 
+  group_by(week) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = trips, y = cost)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
+  labs(title = "Weekly Cost by Number of Trips",
+       x = "Trips per Week",
+       y = "Weekly Total")
 ```
 
 The plot above shows that Giant typically has a slightly higher average cost per item than Trader Joe's (note that the mean line is based on the cost per item across all stores since 01/09/2025). Wegmans is typically a bit higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), making it the preferred store for purchasing those.
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-```{r grocery-stores-month}
+```{r grocery-month}
 grocery2025 %>% 
-  mutate(month = month(date, label = TRUE)) %>% 
   group_by(month) %>% 
-  mutate(monthly_total = sum(cost)) %>% 
-  ggplot(aes(x = month, y = cost)) +
-  geom_col(aes(fill = store)) +
+  ggplot(aes(x = month(date, label = TRUE), y = cost)) +
+  geom_col(aes(fill = store_label)) +
+  geom_hline(yintercept = mean(summarize(group_by(grocery2025, month), 
+                                         cost = sum(cost),
+                                         .groups = "drop")$cost),
+             linetype = "dashed", linewidth = 1.5) +
   scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = "Month",
        y = "Expenditure ($)",
        fill = "Store")
+
+grocery2025 %>% 
+  group_by(month) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = trips, y = cost)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 25)) +
+  labs(title = "Monthly Cost by Number of Trips",
+       x = "Trips per Month",
+       y = "Monthly Total")
 ```
 
 ## Grocery Expenses by Store
@@ -103,7 +129,7 @@ grocery %>%
   datatable()
 
 grocery %>% 
-  ggplot(aes(x = store, y = cost)) +
+  ggplot(aes(x = store_label, y = cost)) +
   geom_boxplot(varwidth = TRUE) +
   labs(title = "Distribution of Expenditures by Store",
        subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
@@ -132,7 +158,7 @@ grocery %>%
        x = "Number of Items Purchased",
        y = "Expenditure ($)",
        col = "Store") +
-  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.75), 
+  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.72), 
         plot.caption = element_text(hjust = 0))
 ```
 
