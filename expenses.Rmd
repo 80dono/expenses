@@ -66,7 +66,38 @@ grocery2025 %>%
        x = "Week",
        y = "Mean Item Cost ($)",
        fill = "Store")
+```
 
+The plot above shows that Giant typically has a slightly higher average cost per item than Trader Joe's (note that the mean line is based on the cost per item across all stores since 01/09/2025). Wegmans is typically a bit higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), making it the preferred store for purchasing those.
+
+Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
+
+```{r grocery-week-trips-cost, out.width="50%", fig.algin="default"}
+grocery2025 %>% 
+  group_by(week) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = week, y = trips)) +
+  geom_line() +
+  geom_point(aes(col = cost), size = 3) +
+  scale_color_gradient(low = "green", high = "red") +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Number of Trips to the Grocery Store by Week",
+       x = "Week", 
+       y = "Number of Trips")
+
+grocery2025 %>% 
+  group_by(week) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = week, y = cost)) +
+  geom_line() +
+  geom_point(aes(size = trips), col = "blue") +
+  scale_y_continuous(n.breaks = 10) +
+  labs(title = "Grocery Expenses by Week",
+       x = "Week", 
+       y = "Expenditure ($)")
+```
+
+```{r grocery-week-summary}
 grocery2025 %>% 
   group_by(week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
@@ -80,9 +111,6 @@ grocery2025 %>%
        y = "Weekly Total")
 ```
 
-The plot above shows that Giant typically has a slightly higher average cost per item than Trader Joe's (note that the mean line is based on the cost per item across all stores since 01/09/2025). Wegmans is typically a bit higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), making it the preferred store for purchasing those.
-
-Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
 ```{r grocery-month}
 grocery2025 %>% 
@@ -138,7 +166,7 @@ grocery %>%
        y = "Expenditure ($)")
 ```
 
-Trips to Wegmans tend to be larger expenditures than Giant, or Trader Joe's. Giant is typically the place we run to for one or two emergency items, which in the small lower quartile.
+Trips to Wegmans tend to be larger expenditures than Giant or Trader Joe's. Giant is typically the place we run to for one or two emergency items, which in the small lower quartile.
 
 We will now plot the ratio of number of items and cost.
 
@@ -163,3 +191,10 @@ grocery %>%
 ```
 
 The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 1 item, slope = mean cost). The three main stores all share a similar slope, though Wegmans is shifted higher (see previous commentary on mean item cost), while Trader Joe's is shifted lower and has a slightly shallower slope.
+
+
+# Credit Cards
+
+# Utilities
+
+# Overall Monthly Expenses
