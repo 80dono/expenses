@@ -13,7 +13,6 @@ library(DT)
 tryCatch(
   {
     gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
-    # gs4_auth(email = "1234", use_oob = TRUE)
     authenticated <- TRUE
   },
   error = function(err) {
