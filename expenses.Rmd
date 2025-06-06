@@ -10,17 +10,35 @@ library(tidyverse)
 library(googlesheets4)
 library(DT)
 # library(fable)
+source("tools/generate_sample_data.R")
 
-gs4_auth(email = "80donofrio@gmail.com")
+gs4_auth(email = read_lines("email.txt"))
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5))
 ```
 
 # Groceries
 
+```{r read-grocery-data, include=FALSE}
+get_grocery_data <- function() {
+  tryCatch({
+    # Read from Google sheet if possible
+    data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
+                       range = "Groceries") %>% 
+      mutate(real = TRUE)
+    return(data)
+    },
+    error = function(err) {
+      # Use sample data if unable to read sheet
+      message("Unable to access data; using sample data instead.")
+      sample_data <- generate_sample_grocery_data(months = 5)
+      return(sample_data)
+      })
+}
+```
+
 ```{r grocery-data, include=FALSE}
-grocery_sheet <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
-                            range = "Groceries")
+grocery_sheet <- get_grocery_data()
 grocery <- grocery_sheet %>% 
   arrange(date) %>% 
   mutate(store = as.factor(store),
@@ -36,6 +54,7 @@ grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
 ```
 
 ## Grocery Expenses over Time
+### Grocery Expenses by Week
 From 01/09/2025 (when we started tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
 ```{r grocery-week}
@@ -51,28 +70,9 @@ grocery2025 %>%
        x = "Week",
        y = "Expenditure ($)",
        fill = "Store")
-
-grocery2025 %>% 
-  group_by(week, store_label) %>% 
-  summarize(mean_cost_per_item = sum(cost) / sum(items),
-            .groups = "drop") %>% 
-  ggplot(aes(x = week, y = mean_cost_per_item)) +
-  geom_col(aes(fill = store_label), position = "dodge") +
-  geom_hline(yintercept = weighted.mean(grocery2025$cost_per_item, 
-                                        grocery2025$items),
-             linetype = "dashed", linewidth = 1.5) +
-  scale_y_continuous(n.breaks = 10) +
-  labs(title = "Average Item Cost by Week",
-       x = "Week",
-       y = "Mean Item Cost ($)",
-       fill = "Store")
 ```
 
-The plot above shows that Giant typically has a slightly higher average cost per item than Trader Joe's (note that the mean line is based on the cost per item across all stores since 01/09/2025). Wegmans is typically a bit higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), making it the preferred store for purchasing those.
-
-Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
-
-```{r grocery-week-trips-cost, out.width="50%", fig.algin="default"}
+```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
 grocery2025 %>% 
   group_by(week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
@@ -81,9 +81,11 @@ grocery2025 %>%
   geom_point(aes(col = cost), size = 3) +
   scale_color_gradient(low = "green", high = "red") +
   scale_y_continuous(n.breaks = 10) +
-  labs(title = "Number of Trips to the Grocery Store by Week",
+  theme(legend.position = "bottom") +
+  labs(title = "Trips to the Grocery Store by Week",
        x = "Week", 
-       y = "Number of Trips")
+       y = "Number of Trips",
+       col = "Expenditure ($)")
 
 grocery2025 %>% 
   group_by(week) %>% 
@@ -92,12 +94,14 @@ grocery2025 %>%
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
   scale_y_continuous(n.breaks = 10) +
+  theme(legend.position = "bottom") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
-       y = "Expenditure ($)")
+       y = "Expenditure ($)",
+       size = "Trips")
 ```
 
-```{r grocery-week-summary}
+```{r grocery-weekly-cost}
 grocery2025 %>% 
   group_by(week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
@@ -111,7 +115,7 @@ grocery2025 %>%
        y = "Weekly Total")
 ```
 
-
+### Grocery Expenses by Month
 ```{r grocery-month}
 grocery2025 %>% 
   group_by(month) %>% 
@@ -126,7 +130,38 @@ grocery2025 %>%
        x = "Month",
        y = "Expenditure ($)",
        fill = "Store")
+```
 
+```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
+grocery2025 %>% 
+  group_by(month) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = month, y = trips)) +
+  geom_line() +
+  geom_point(aes(col = cost), size = 3) +
+  scale_color_gradient(low = "green", high = "red") +
+  scale_y_continuous(n.breaks = 10) +
+  theme(legend.position = "bottom") +
+  labs(title = "Trips to the Grocery Store by Month",
+       x = "Month", 
+       y = "Number of Trips",
+       col = "Expenditure ($)")
+
+grocery2025 %>% 
+  group_by(month) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  ggplot(aes(x = month, y = cost)) +
+  geom_line() +
+  geom_point(aes(size = trips), col = "blue") +
+  scale_y_continuous(n.breaks = 10) +
+  theme(legend.position = "bottom") +
+  labs(title = "Grocery Expenses by Month",
+       x = "Month", 
+       y = "Expenditure ($)",
+       size = "Trips")
+```
+
+```{r grocery-monthly-cost}
 grocery2025 %>% 
   group_by(month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
@@ -136,9 +171,10 @@ grocery2025 %>%
   scale_x_continuous(n.breaks = 10) +
   scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 25)) +
   labs(title = "Monthly Cost by Number of Trips",
-       x = "Trips per Month",
+       x = "Trips",
        y = "Monthly Total")
 ```
+
 
 ## Grocery Expenses by Store
 For the store analysis, we include the inconsistent receipts saved prior to 01/09/2025. The table is sorted in descending order by number of trips.
@@ -146,11 +182,11 @@ For the store analysis, we include the inconsistent receipts saved prior to 01/0
 ```{r grocery-stores-week}
 grocery %>% 
   group_by(store) %>% 
-  summarize(trips = n(), mean_items = format(round(mean(items), 2), nsmall = 2),
+  summarize(trips = n(), 
+            mean_items = format(round(mean(items), 2), nsmall = 2),
+            sd_items = format(round(sd(items), 2), nsmall = 2), 
             mean_cost = format(round(mean(cost), 2), nsmall = 2), 
             mean_cost_per_item = format(round(sum(cost) / sum(items), 2), nsmall = 2),
-            # Remove standard deviation of cost?
-            sd_cost = format(round(sd(cost), 2), nsmall = 2), 
             min_cost = format(min(cost), nsmall = 2), 
             max_cost = format(max(cost), nsmall = 2)) %>% 
   arrange(desc(trips)) %>% 
@@ -166,7 +202,9 @@ grocery %>%
        y = "Expenditure ($)")
 ```
 
-Trips to Wegmans tend to be larger expenditures than Giant or Trader Joe's. Giant is typically the place we run to for one or two emergency items, which in the small lower quartile.
+The table above shows that Giant typically has a slightly higher average cost per item than Trader Joe's. Wegmans is a higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), as it is the preferred store for purchasing those.
+
+Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
 We will now plot the ratio of number of items and cost.
 
