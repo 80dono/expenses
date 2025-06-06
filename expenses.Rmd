@@ -12,7 +12,6 @@ library(DT)
 # library(fable)
 source("tools/generate_sample_data.R")
 
-gs4_auth(email = read_lines("email.txt"))
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5))
 ```
@@ -23,6 +22,7 @@ theme_update(plot.title = element_text(hjust = 0.5),
 get_grocery_data <- function() {
   tryCatch({
     # Read from Google sheet if possible
+    gs4_auth(email = read_lines("email.txt"))
     data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
                        range = "Groceries") %>% 
       mutate(real = TRUE)
@@ -30,7 +30,7 @@ get_grocery_data <- function() {
     },
     error = function(err) {
       # Use sample data if unable to read sheet
-      message("Unable to access data; using sample data instead.")
+      message("Unable to access data; generating sample data instead.")
       sample_data <- generate_sample_grocery_data(months = 5)
       return(sample_data)
       })
