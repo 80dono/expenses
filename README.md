@@ -13,5 +13,5 @@ This is a simple project I created to better understand my expenses. Currently i
 ```
 
 ## Local Files
-_email.txt_: A text file containing my personal email address for authentication
+_email.txt_: A text file containing my personal email address for authentication  
 _expenses.Rproj_: Preserves the file structure within my computer; useful for retrieving authentication token
