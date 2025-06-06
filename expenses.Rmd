@@ -214,7 +214,7 @@ We will now plot the ratio of number of items and cost.
 grocery %>% 
   ggplot(aes(x = items, y = cost, col = store)) +
   geom_point(size = 2) +
-  geom_abline(intercept = 1, slope = sum(grocery$cost) / sum(grocery$items), 
+  geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
               linetype = "dashed", linewidth = 1) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
@@ -230,7 +230,7 @@ grocery %>%
         plot.caption = element_text(hjust = 0))
 ```
 
-The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 1 item, slope = mean cost).
+The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
 
 
 # Credit Cards
