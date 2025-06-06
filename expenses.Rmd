@@ -28,6 +28,8 @@ theme_update(plot.title = element_text(hjust = 0.5),
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
 
 # Groceries
+Note: Grocery data does not include Costco, as groceries are only a small portion of our expenses from that store.
+
 ```{r grocery-data, include=FALSE}
 grocery_sheet <- get_grocery_data(authenticated)
 grocery <- grocery_sheet %>% 
@@ -35,18 +37,23 @@ grocery <- grocery_sheet %>%
   mutate(store = as.factor(store),
          cost_per_item = cost / items,
          week = floor_date(date, unit = "week"),
-         month = floor_date(date, unit = "month")) %>% 
+         month = floor_date(date, unit = "month"),
+         year = year(date)) %>% 
   group_by(store) %>% 
   mutate(store_label = as.factor(ifelse(n() < 3, "Other", as.character(store)))) %>% 
   ungroup()
-grocery$store_label = factor(grocery$store_label, levels = c(levels(grocery$store_label)[2:nlevels(grocery$store_label)], 
-                                                             "Other"))
+grocery$store_label = factor(grocery$store_label, 
+                             levels = c(levels(grocery$store_label)[2:nlevels(grocery$store_label)], 
+                                        "Other"))
+
 grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
 ```
 
 ## Grocery Expenses over Time
 ### Grocery Expenses by Week
-From 01/09/2025 (when we started tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
+From 01/09/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
+
+Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than three times are grouped as "Other".
 
 ```{r grocery-week}
 grocery2025 %>% 
@@ -63,9 +70,11 @@ grocery2025 %>%
        fill = "Store")
 ```
 
+Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change.
+
 ```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
 grocery2025 %>% 
-  group_by(week) %>% 
+  group_by(year, week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = week, y = trips)) +
   geom_line() +
@@ -79,7 +88,7 @@ grocery2025 %>%
        col = "Expenditure ($)")
 
 grocery2025 %>% 
-  group_by(week) %>% 
+  group_by(year, week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_line() +
@@ -92,9 +101,11 @@ grocery2025 %>%
        size = "Trips")
 ```
 
+The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend.
+
 ```{r grocery-weekly-cost}
 grocery2025 %>% 
-  group_by(week) %>% 
+  group_by(year, week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
@@ -103,13 +114,15 @@ grocery2025 %>%
   scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
   labs(title = "Weekly Cost by Number of Trips",
        x = "Trips per Week",
-       y = "Weekly Total")
+       y = "Weekly Expenditure ($)")
 ```
 
 ### Grocery Expenses by Month
+We will now repeat each plot, this time aggregating over a month instead of week.
+
 ```{r grocery-month}
 grocery2025 %>% 
-  group_by(month) %>% 
+  group_by(year, month) %>% 
   ggplot(aes(x = month(date, label = TRUE), y = cost)) +
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean(summarize(group_by(grocery2025, month), 
@@ -125,7 +138,7 @@ grocery2025 %>%
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
 grocery2025 %>% 
-  group_by(month) %>% 
+  group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = month, y = trips)) +
   geom_line() +
@@ -139,7 +152,7 @@ grocery2025 %>%
        col = "Expenditure ($)")
 
 grocery2025 %>% 
-  group_by(month) %>% 
+  group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_line() +
@@ -154,7 +167,7 @@ grocery2025 %>%
 
 ```{r grocery-monthly-cost}
 grocery2025 %>% 
-  group_by(month) %>% 
+  group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
