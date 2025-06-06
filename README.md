@@ -8,6 +8,7 @@ This is a simple project I created to better understand my expenses. Currently i
     ├── generate_sample_data.R        # Creates sample data for non-authenticated users
     ├── get_data.R                    # Retrieves data, either from the Google Sheet or by generating sample data
 ├── .gitignore
+├── README.md
 ├── expenses.Rmd                      # Main script for generating report
 └── README.md
 ```
