@@ -1,6 +1,6 @@
 library(tidyverse)
 
-# ADD DOCSTRINGS!!
+
 #' Generate sample grocery data
 #' 
 #' This function creates fake data resembling the actual grocery data recorded, for the purposes of demonstrating capability without revealing personal information.

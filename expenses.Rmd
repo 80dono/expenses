@@ -1,5 +1,5 @@
 ---
-title: "<center>Donofrio Expenses</center>"
+title: "<center>Expenses</center>"
 output: html_document
 ---
 
@@ -9,36 +9,28 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 library(tidyverse)
 library(googlesheets4)
 library(DT)
-# library(fable)
-source("tools/generate_sample_data.R")
+
+tryCatch(
+  {
+    gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
+    # gs4_auth(email = "1234", use_oob = TRUE)
+    authenticated <- TRUE
+  },
+  error = function(err) {
+    message("User is not authenticated.")
+    authenticated <- FALSE
+  })
+source("tools/get_data.R")
 
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5))
 ```
 
+All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
+
 # Groceries
-
-```{r read-grocery-data, include=FALSE}
-get_grocery_data <- function() {
-  tryCatch({
-    # Read from Google sheet if possible
-    gs4_auth(email = read_lines("email.txt"))
-    data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
-                       range = "Groceries") %>% 
-      mutate(real = TRUE)
-    return(data)
-    },
-    error = function(err) {
-      # Use sample data if unable to read sheet
-      message("Unable to access data; generating sample data instead.")
-      sample_data <- generate_sample_grocery_data(months = 5)
-      return(sample_data)
-      })
-}
-```
-
 ```{r grocery-data, include=FALSE}
-grocery_sheet <- get_grocery_data()
+grocery_sheet <- get_grocery_data(authenticated)
 grocery <- grocery_sheet %>% 
   arrange(date) %>% 
   mutate(store = as.factor(store),
@@ -202,8 +194,6 @@ grocery %>%
        y = "Expenditure ($)")
 ```
 
-The table above shows that Giant typically has a slightly higher average cost per item than Trader Joe's. Wegmans is a higher average cost but may be affected by the wider range of higher-cost, non-grocery items (such as hygiene products and kitchenware), as it is the preferred store for purchasing those.
-
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
 We will now plot the ratio of number of items and cost.
@@ -228,7 +218,7 @@ grocery %>%
         plot.caption = element_text(hjust = 0))
 ```
 
-The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 1 item, slope = mean cost). The three main stores all share a similar slope, though Wegmans is shifted higher (see previous commentary on mean item cost), while Trader Joe's is shifted lower and has a slightly shallower slope.
+The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 1 item, slope = mean cost).
 
 
 # Credit Cards
