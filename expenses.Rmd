@@ -1,6 +1,9 @@
 ---
 title: "<center>Expenses</center>"
-output: html_document
+subtitle: "Table of Contents"
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -101,14 +104,14 @@ grocery2025 %>%
        size = "Trips")
 ```
 
-The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend.
+The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
 grocery2025 %>% 
   group_by(year, week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = trips, y = cost)) +
-  geom_point() +
+  geom_jitter() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
   scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +

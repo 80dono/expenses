@@ -13,5 +13,6 @@ This is a simple project I created to better understand my expenses. Currently i
 ```
 
 ## Local Files
-_email.txt_: A text file containing my personal email address for authentication.  
-_expenses.Rproj_: Preserves the file structure within my computer; useful for retrieving the cached authentication token.
+The files below are not included in the repository. They are stored locally on my personal device, and so you may see references to them in the code. The scripts should run successfully (with simulated data) without these files.  
+- _email.txt_: A text file containing my personal email address for authentication.  
+- _expenses.Rproj_: Preserves the file structure within my computer; useful for retrieving the cached authentication token.
