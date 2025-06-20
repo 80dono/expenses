@@ -11,8 +11,8 @@ generate_sample_grocery_data <- function(months = 5) {
   date <- seq(as.Date(today() - months(months)), today(), by = "day") %>% 
     sample(20 * months, replace = TRUE)
   items <- round(rbeta(20 * months, 3, 11) * 40) # Right-skewed distribution with a maximum of 40 items
-  store <- sample(c("Aldi", "Food Lion", "Giant", "Harris Teeter", "Safeway", "Trader Joe's", "Whole Foods"), 20 * months, 
-                  replace = TRUE, prob = c(0.05, 0.1, 0.15, 0.25, 0.1, 0.3, 0.05))
+  store <- sample(c("Food Lion", "Giant", "Harris Teeter", "Safeway", "Trader Joe's", "Wegmans", "Whole Foods"), 20 * months, 
+                  replace = TRUE, prob = c(0.1, 0.15, 0.25, 0.1, 0.3, 0.05, 0.05))
   # Total cost is a function of the number of items
   # Cost per item is right skewed with a minimum of $2 and maximum of $15
   cost <- items * (2 + (rbeta(20 * months, 6, 30) * 14)) %>% 

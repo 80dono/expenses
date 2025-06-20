@@ -175,8 +175,8 @@ grocery2025 %>%
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
-  scale_x_continuous(n.breaks = 10) +
-  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 25)) +
+  scale_x_continuous(breaks = seq(2, max(count(grocery2025, month)$n), 2)) +
+  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 50)) +
   labs(title = "Monthly Cost by Number of Trips",
        x = "Trips",
        y = "Monthly Total")
