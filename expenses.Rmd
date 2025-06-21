@@ -64,13 +64,16 @@ From 01/09/2025 (when we started continuously tracking trips to the grocery stor
 Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than three times are grouped as "Other".
 
 ```{r grocery-week}
+mean_weekly_cost <- mean(summarize(group_by(grocery2025, week), 
+                                   cost = sum(cost),
+                                   .groups = "drop")$cost)
 grocery2025 %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_col(aes(fill = store_label)) +
-  geom_hline(yintercept = mean(summarize(group_by(grocery2025, week), 
-                                         cost = sum(cost),
-                                         .groups = "drop")$cost),
+  geom_hline(yintercept = mean_weekly_cost,
              linetype = "dashed", linewidth = 1.5) +
+  annotate("label", x = as.POSIXct("2024-12-25"), y = mean_weekly_cost, 
+           label = round(mean_weekly_cost, 2)) +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Week",
        x = "Week",
@@ -99,6 +102,7 @@ grocery2025 %>%
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
   # scale_y_continuous(n.breaks = 10) +
+  guides(size = guide_legend(nrow = 1)) +
   theme(legend.position = "bottom") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
@@ -126,20 +130,24 @@ grocery2025 %>%
 We will now repeat each plot, this time aggregating over a month instead of week.
 
 ```{r grocery-month}
+mean_monthly_cost <- mean(summarize(group_by(grocery2025, month), 
+                                    cost = sum(cost),
+                                    .groups = "drop")$cost)
 grocery2025 %>% 
   group_by(year, month) %>% 
   ggplot(aes(x = month(date, label = TRUE), y = cost)) +
   geom_col(aes(fill = store_label)) +
-  geom_hline(yintercept = mean(summarize(group_by(grocery2025, month), 
-                                         cost = sum(cost),
-                                         .groups = "drop")$cost),
+  geom_hline(yintercept = mean_monthly_cost,
              linetype = "dashed", linewidth = 1.5) +
+  annotate("label", x = 0.75, y = mean_monthly_cost, 
+           label = round(mean_monthly_cost, 2)) +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = "Month",
        y = "Expenditure ($)",
        fill = NULL) +
-  theme(axis.line = element_blank())
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
 ```
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
@@ -208,7 +216,8 @@ grocery %>%
                          format(max(grocery$date), "%m/%d/%Y")),
        x = "Store", 
        y = "Expenditure ($)") +
-  theme(axis.line = element_blank)
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
 ```
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
