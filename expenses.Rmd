@@ -15,6 +15,7 @@ library(DT)
 
 tryCatch(
   {
+    # Set use_oob = FALSE or remove for initial run
     gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
     authenticated <- TRUE
   },
@@ -25,7 +26,11 @@ tryCatch(
 source("tools/get_data.R")
 
 theme_update(plot.title = element_text(hjust = 0.5), 
-             plot.subtitle = element_text(hjust = 0.5))
+             plot.subtitle = element_text(hjust = 0.5),
+             panel.background = element_blank(),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             axis.line = element_line(color = "black"))
 ```
 
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
@@ -66,11 +71,12 @@ grocery2025 %>%
                                          cost = sum(cost),
                                          .groups = "drop")$cost),
              linetype = "dashed", linewidth = 1.5) +
-  scale_y_continuous(n.breaks = 10) +
+  # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Week",
        x = "Week",
        y = "Expenditure ($)",
-       fill = "Store")
+       fill = NULL) +
+  theme(axis.line = element_blank())
 ```
 
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change.
@@ -80,15 +86,11 @@ grocery2025 %>%
   group_by(year, week) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = week, y = trips)) +
-  geom_line() +
-  geom_point(aes(col = cost), size = 3) +
-  scale_color_gradient(low = "green", high = "red") +
-  scale_y_continuous(n.breaks = 10) +
-  theme(legend.position = "bottom") +
+  geom_line(col = "blue") +
+  # scale_y_continuous(n.breaks = 10) +
   labs(title = "Trips to the Grocery Store by Week",
        x = "Week", 
-       y = "Number of Trips",
-       col = "Expenditure ($)")
+       y = "Number of Trips")
 
 grocery2025 %>% 
   group_by(year, week) %>% 
@@ -96,7 +98,7 @@ grocery2025 %>%
   ggplot(aes(x = week, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
-  scale_y_continuous(n.breaks = 10) +
+  # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
@@ -114,7 +116,7 @@ grocery2025 %>%
   geom_jitter() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
-  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
+  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
   labs(title = "Weekly Cost by Number of Trips",
        x = "Trips per Week",
        y = "Weekly Expenditure ($)")
@@ -132,11 +134,12 @@ grocery2025 %>%
                                          cost = sum(cost),
                                          .groups = "drop")$cost),
              linetype = "dashed", linewidth = 1.5) +
-  scale_y_continuous(n.breaks = 10) +
+  # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = "Month",
        y = "Expenditure ($)",
-       fill = "Store")
+       fill = NULL) +
+  theme(axis.line = element_blank())
 ```
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
@@ -144,10 +147,8 @@ grocery2025 %>%
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
   ggplot(aes(x = month, y = trips)) +
-  geom_line() +
-  geom_point(aes(col = cost), size = 3) +
-  scale_color_gradient(low = "green", high = "red") +
-  scale_y_continuous(n.breaks = 10) +
+  geom_line(col = "blue") +
+  # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Trips to the Grocery Store by Month",
        x = "Month", 
@@ -160,7 +161,7 @@ grocery2025 %>%
   ggplot(aes(x = month, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
-  scale_y_continuous(n.breaks = 10) +
+  # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Grocery Expenses by Month",
        x = "Month", 
@@ -176,10 +177,10 @@ grocery2025 %>%
   geom_point() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(breaks = seq(2, max(count(grocery2025, month)$n), 2)) +
-  scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 50)) +
+  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 50)) +
   labs(title = "Monthly Cost by Number of Trips",
        x = "Trips",
-       y = "Monthly Total")
+       y = "Monthly Total ($)")
 ```
 
 
@@ -206,7 +207,8 @@ grocery %>%
        subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
                          format(max(grocery$date), "%m/%d/%Y")),
        x = "Store", 
-       y = "Expenditure ($)")
+       y = "Expenditure ($)") +
+  theme(axis.line = element_blank)
 ```
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
@@ -220,16 +222,14 @@ grocery %>%
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
               linetype = "dashed", linewidth = 1) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
-  scale_x_continuous(n.breaks = 10) +
-  scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Stores by Average Item Cost",
        subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
                          format(max(grocery$date), "%m/%d/%Y")),
        caption = "Note: the dashed line is the overall average cost per item",
        x = "Number of Items Purchased",
        y = "Expenditure ($)",
-       col = "Store") +
-  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.72), 
+       col = NULL) +
+  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.75), 
         plot.caption = element_text(hjust = 0))
 ```
 
