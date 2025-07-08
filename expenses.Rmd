@@ -13,6 +13,8 @@ library(tidyverse)
 library(googlesheets4)
 library(DT)
 
+# Create email.txt file (not included in Git repo)
+authenticated <- FALSE
 tryCatch(
   {
     # Set use_oob = FALSE or remove for initial run
@@ -21,7 +23,6 @@ tryCatch(
   },
   error = function(err) {
     message("User is not authenticated.")
-    authenticated <- FALSE
   })
 source("tools/get_data.R")
 
@@ -42,7 +43,8 @@ Note: Grocery data does not include Costco, as groceries are only a small portio
 grocery_sheet <- get_grocery_data(authenticated)
 grocery <- grocery_sheet %>% 
   arrange(date) %>% 
-  mutate(store = as.factor(store),
+  mutate(date = as.Date(date, tz = "EST"),
+         store = as.factor(store),
          cost_per_item = cost / items,
          week = floor_date(date, unit = "week"),
          month = floor_date(date, unit = "month"),
@@ -50,9 +52,10 @@ grocery <- grocery_sheet %>%
   group_by(store) %>% 
   mutate(store_label = as.factor(ifelse(n() < 3, "Other", as.character(store)))) %>% 
   ungroup()
-grocery$store_label = factor(grocery$store_label, 
-                             levels = c(levels(grocery$store_label)[2:nlevels(grocery$store_label)], 
-                                        "Other"))
+grocery$store_label <- factor(grocery$store_label, 
+                              levels = c(setdiff(levels(grocery$store_label), "Other"), 
+                                         "Other")
+)
 
 grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
 ```
@@ -72,7 +75,8 @@ grocery2025 %>%
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean_weekly_cost,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = as.POSIXct("2024-12-25"), y = mean_weekly_cost, 
+  annotate("label", x = as.Date(min(grocery2025$week) - days(14), tz = "EST"), 
+           y = mean_weekly_cost, 
            label = round(mean_weekly_cost, 2)) +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Week",
