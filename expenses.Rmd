@@ -89,9 +89,11 @@ grocery2025 %>%
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change.
 
 ```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
-grocery2025 %>% 
-  group_by(year, week) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+week_summary <- grocery2025 %>%
+  group_by(year, week) %>%
+  summarize(trips = n(), cost = sum(cost), .groups = "drop")
+
+week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
   geom_line(col = "blue") +
   # scale_y_continuous(n.breaks = 10) +
@@ -99,9 +101,7 @@ grocery2025 %>%
        x = "Week", 
        y = "Number of Trips")
 
-grocery2025 %>% 
-  group_by(year, week) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
@@ -117,15 +117,17 @@ grocery2025 %>%
 The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
-grocery2025 %>% 
-  group_by(year, week) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+week_fit <- lm(cost ~ poly(trips, 3), data = week_summary)
+r2_week <- summary(week_fit)$r.squared
+
+week_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_jitter() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
   # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
   labs(title = "Weekly Cost by Number of Trips",
+       subtitle = paste0("R-squared = ", round(r2_week, 2)),
        x = "Trips per Week",
        y = "Weekly Expenditure ($)")
 ```
@@ -155,9 +157,11 @@ grocery2025 %>%
 ```
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
-grocery2025 %>% 
+month_summary <- grocery2025 %>% 
   group_by(year, month) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop")
+
+month_summary %>% 
   ggplot(aes(x = month, y = trips)) +
   geom_line(col = "blue") +
   # scale_y_continuous(n.breaks = 10) +
@@ -167,9 +171,7 @@ grocery2025 %>%
        y = "Number of Trips",
        col = "Expenditure ($)")
 
-grocery2025 %>% 
-  group_by(year, month) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
@@ -182,15 +184,17 @@ grocery2025 %>%
 ```
 
 ```{r grocery-monthly-cost}
-grocery2025 %>% 
-  group_by(year, month) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop") %>% 
+month_fit <- lm(cost ~ poly(trips, 3), data = month_summary)
+r2_month <- summary(month_fit)$r.squared
+
+month_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(breaks = seq(2, max(count(grocery2025, month)$n), 2)) +
   # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 50)) +
   labs(title = "Monthly Cost by Number of Trips",
+       subtitle = paste0("R-squared = ", round(r2_month, 2)),
        x = "Trips",
        y = "Monthly Total ($)")
 ```
