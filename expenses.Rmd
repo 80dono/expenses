@@ -13,11 +13,11 @@ library(tidyverse)
 library(googlesheets4)
 library(DT)
 
-# Create email.txt file (not included in Git repo)
 authenticated <- FALSE
 tryCatch(
   {
-    # Set use_oob = FALSE or remove for initial run
+    # Create email.txt file (not included in Git repo)
+    # Set use_oob = FALSE for initial run
     gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
     authenticated <- TRUE
   },
@@ -43,7 +43,7 @@ Note: Grocery data does not include Costco, as groceries are only a small portio
 grocery_sheet <- get_grocery_data(authenticated)
 grocery <- grocery_sheet %>% 
   arrange(date) %>% 
-  mutate(date = as.Date(date, tz = "EST"),
+  mutate(date = as.Date(date),
          store = as.factor(store),
          cost_per_item = cost / items,
          week = floor_date(date, unit = "week"),
@@ -57,7 +57,8 @@ grocery$store_label <- factor(grocery$store_label,
                                          "Other")
 )
 
-grocery2025 <- filter(grocery, date >= as.Date("2025-01-09"))
+grocery_last365 <- filter(grocery, date >= as.Date("2025-01-09")) # Once a year has passed, change this to the last 365 days
+# grocery_last365 <- filter(grocery, date >= today() - days(365))
 ```
 
 ## Grocery Expenses over Time
@@ -67,17 +68,18 @@ From 01/09/2025 (when we started continuously tracking trips to the grocery stor
 Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than three times are grouped as "Other".
 
 ```{r grocery-week}
-mean_weekly_cost <- mean(summarize(group_by(grocery2025, week), 
+mean_weekly_cost <- mean(summarize(group_by(grocery_last365, week), 
                                    cost = sum(cost),
                                    .groups = "drop")$cost)
-grocery2025 %>% 
+grocery_last365 %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean_weekly_cost,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = as.Date(min(grocery2025$week) - days(14), tz = "EST"), 
+  annotate("label", x = as.Date(min(grocery_last365$week) - days(14)), 
            y = mean_weekly_cost, 
            label = round(mean_weekly_cost, 2)) +
+  scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Week",
        x = "Week",
@@ -89,13 +91,14 @@ grocery2025 %>%
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change.
 
 ```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
-week_summary <- grocery2025 %>%
+week_summary <- grocery_last365 %>%
   group_by(year, week) %>%
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
 week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
   geom_line(col = "blue") +
+  scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Trips to the Grocery Store by Week",
        x = "Week", 
@@ -105,6 +108,7 @@ week_summary %>%
   ggplot(aes(x = week, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
+  scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   guides(size = guide_legend(nrow = 1)) +
   theme(legend.position = "bottom") +
@@ -125,7 +129,7 @@ week_summary %>%
   geom_jitter() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
-  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, week)$cost)), 25)) +
+  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery_last365, week)$cost)), 25)) +
   labs(title = "Weekly Cost by Number of Trips",
        subtitle = paste0("R-squared = ", round(r2_week, 2)),
        x = "Trips per Week",
@@ -136,17 +140,18 @@ week_summary %>%
 We will now repeat each plot, this time aggregating over a month instead of week.
 
 ```{r grocery-month}
-mean_monthly_cost <- mean(summarize(group_by(grocery2025, month), 
+mean_monthly_cost <- mean(summarize(group_by(grocery_last365, month), 
                                     cost = sum(cost),
                                     .groups = "drop")$cost)
-grocery2025 %>% 
+grocery_last365 %>% 
   group_by(year, month) %>% 
-  ggplot(aes(x = month(date, label = TRUE), y = cost)) +
+  ggplot(aes(x = month, y = cost)) +
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean_monthly_cost,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = 0.75, y = mean_monthly_cost, 
+  annotate("label", x = min(grocery_last365$month) - days(14), y = mean_monthly_cost, 
            label = round(mean_monthly_cost, 2)) +
+  scale_x_date(breaks = "1 month", date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = "Month",
@@ -157,13 +162,14 @@ grocery2025 %>%
 ```
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
-month_summary <- grocery2025 %>% 
+month_summary <- grocery_last365 %>% 
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
 month_summary %>% 
   ggplot(aes(x = month, y = trips)) +
   geom_line(col = "blue") +
+  scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Trips to the Grocery Store by Month",
@@ -175,6 +181,7 @@ month_summary %>%
   ggplot(aes(x = month, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
+  scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Grocery Expenses by Month",
@@ -191,8 +198,8 @@ month_summary %>%
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
-  scale_x_continuous(breaks = seq(2, max(count(grocery2025, month)$n), 2)) +
-  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery2025, month)$cost)), 50)) +
+  scale_x_continuous(breaks = seq(2, max(count(grocery_last365, month)$n), 2)) +
+  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery_last365, month)$cost)), 50)) +
   labs(title = "Monthly Cost by Number of Trips",
        subtitle = paste0("R-squared = ", round(r2_month, 2)),
        x = "Trips",
