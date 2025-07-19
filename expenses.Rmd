@@ -103,7 +103,7 @@ grocery2025 %>%
   geom_point(aes(size = trips), col = "blue") +
   # scale_y_continuous(n.breaks = 10) +
   guides(size = guide_legend(nrow = 1)) +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "top") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
        y = "Expenditure ($)",
@@ -143,7 +143,7 @@ grocery2025 %>%
            label = round(mean_monthly_cost, 2)) +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
-       x = "Month",
+       x = NULL,
        y = "Expenditure ($)",
        fill = NULL) +
   theme(axis.line = element_blank(),
@@ -170,7 +170,7 @@ grocery2025 %>%
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
   # scale_y_continuous(n.breaks = 10) +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "top") +
   labs(title = "Grocery Expenses by Month",
        x = "Month", 
        y = "Expenditure ($)",
