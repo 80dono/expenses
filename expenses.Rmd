@@ -237,7 +237,7 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost.
+We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted.
 
 ```{r item-cost-scatterplot}
 grocery %>% 
