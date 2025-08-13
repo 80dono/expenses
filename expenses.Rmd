@@ -126,7 +126,7 @@ r2_week <- summary(week_fit)$r.squared
 
 week_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
-  geom_jitter() +
+  geom_jitter(width = 0.25, height = 0) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
   # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery_last365, week)$cost)), 25)) +
@@ -241,6 +241,7 @@ We will now plot the ratio of number of items and cost.
 
 ```{r item-cost-scatterplot}
 grocery %>% 
+  filter(store_label != "Other") %>% # Only include stores that have been visited 3+ times
   ggplot(aes(x = items, y = cost, col = store)) +
   geom_point(size = 2) +
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
