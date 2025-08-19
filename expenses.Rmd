@@ -91,11 +91,11 @@ grocery_last365 %>%
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change.
 
 ```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
-week_summary <- grocery_last365 %>%
+grocery_week_summary <- grocery_last365 %>%
   group_by(year, week) %>%
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
-week_summary %>% 
+grocery_week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
   geom_line(col = "blue") +
   scale_x_date(date_labels = "%b %Y") +
@@ -104,7 +104,7 @@ week_summary %>%
        x = "Week", 
        y = "Number of Trips")
 
-week_summary %>% 
+grocery_week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
@@ -121,10 +121,10 @@ week_summary %>%
 The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
-week_fit <- lm(cost ~ poly(trips, 3), data = week_summary)
+week_fit <- lm(cost ~ poly(trips, 3), data = grocery_week_summary)
 r2_week <- summary(week_fit)$r.squared
 
-week_summary %>% 
+grocery_week_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_jitter(width = 0.25, height = 0) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
@@ -162,11 +162,11 @@ grocery_last365 %>%
 ```
 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
-month_summary <- grocery_last365 %>% 
+grocery_month_summary <- grocery_last365 %>% 
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
-month_summary %>% 
+grocery_month_summary %>% 
   ggplot(aes(x = month, y = trips)) +
   geom_line(col = "blue") +
   scale_x_date(date_labels = "%b %Y") +
@@ -177,7 +177,7 @@ month_summary %>%
        y = "Number of Trips",
        col = "Expenditure ($)")
 
-month_summary %>% 
+grocery_month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_line() +
   geom_point(aes(size = trips), col = "blue") +
@@ -191,10 +191,10 @@ month_summary %>%
 ```
 
 ```{r grocery-monthly-cost}
-month_fit <- lm(cost ~ poly(trips, 3), data = month_summary)
+month_fit <- lm(cost ~ poly(trips, 3), data = grocery_month_summary)
 r2_month <- summary(month_fit)$r.squared
 
-month_summary %>% 
+grocery_month_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
   geom_point() +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
@@ -237,7 +237,7 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted.
+We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted, though all stores are included in the overall average cost line (dashed).
 
 ```{r item-cost-scatterplot}
 grocery %>% 
@@ -263,6 +263,36 @@ The dashed line in the plot above represents the overall average cost per item (
 
 # Credit Cards
 
+
 # Utilities
+We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Water is billed on a quarterly schedule, while the rest are billed monthly.
+```{r utility-data, include=FALSE}
+utilities_sheet <- get_utility_data(authenticated)
+utilities <- utilities_sheet %>% 
+  arrange(date) %>% 
+  mutate(date = as.Date(date),
+         year = year(date),
+         month = floor_date(date, unit = "month"))
+# Auto-generate fixed data each month for cell phone and Internet
+```
+
+## Utility Expenses over Time
+```{r}
+utilities_month_summary <- utilities %>% 
+  group_by(utility, year, month) %>% 
+  summarize(trips = n(), cost = sum(cost), .groups = "drop")
+
+utilities_month_summary %>% 
+  ggplot(aes(x = month, y = cost, col = utility)) +
+  geom_line() +
+  scale_x_date(date_labels = "%b %Y") +
+  # scale_y_continuous(n.breaks = 10) +
+  theme(legend.position = "bottom") +
+  labs(title = "Utility Costs by Month",
+       x = "Month", 
+       y = "Cost ($)",
+       col = "Utility")
+```
+
 
 # Overall Monthly Expenses
