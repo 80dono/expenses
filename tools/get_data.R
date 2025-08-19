@@ -37,6 +37,11 @@ get_utility_data <- function(authenticated = FALSE) {
     # Read from Google sheet if possible
     data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
                        range = "Utilities") %>% 
+      bind_rows(data.frame(date = seq.Date(as.Date("9/4/2024", "%m/%d/%Y"),
+                                           floor_date(today()) + 3, 
+                                           by = "month"),
+                           cost = 89.99,
+                           utility = "Internet")) %>% 
       mutate(real = TRUE)
     return(data)
   }

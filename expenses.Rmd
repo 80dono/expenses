@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 library(tidyverse)
 library(googlesheets4)
 library(DT)
+library(scales)
 
 authenticated <- FALSE
 tryCatch(
@@ -278,15 +279,30 @@ utilities <- utilities_sheet %>%
 
 ## Utility Expenses over Time
 ```{r}
-utilities_month_summary <- utilities %>% 
-  group_by(utility, year, month) %>% 
-  summarize(trips = n(), cost = sum(cost), .groups = "drop")
+utilities_total_cost <- utilities %>% 
+  group_by(year, month) %>% 
+  summarize(cost = sum(cost), utility = "Total",
+          .groups = "drop") %>% 
+  bind_rows(utilities)
+utilities_total_cost$utility <- factor(utilities_total_cost$utility, 
+                                       levels = c(setdiff(levels(as.factor(utilities_total_cost$utility)),
+                                                          "Total"), 
+                                                  "Total"))
 
-utilities_month_summary %>% 
+utilities_palette <- hue_pal()(4)
+
+# Try looking at costs on a quarterly basis, so all are on the same scale??
+utilities_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility)) +
   geom_line() +
+  geom_point(size = 1) +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
+  scale_color_manual(values = c("Electricity" = utilities_palette[2], 
+                                "Water" = utilities_palette[3],
+                                "Phone" = utilities_palette[1],
+                                "Internet" = utilities_palette[4],
+                                "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Month",
        x = "Month", 
