@@ -13,6 +13,7 @@ library(tidyverse)
 library(googlesheets4)
 library(DT)
 library(scales)
+library(tsibble)
 
 authenticated <- FALSE
 tryCatch(
@@ -266,7 +267,7 @@ The dashed line in the plot above represents the overall average cost per item (
 
 
 # Utilities
-We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Water is billed on a quarterly schedule, while the rest are billed monthly.
+We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary.
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
 utilities <- utilities_sheet %>% 
@@ -274,15 +275,14 @@ utilities <- utilities_sheet %>%
   mutate(date = as.Date(date),
          year = year(date),
          month = floor_date(date, unit = "month"))
-# Auto-generate fixed data each month for cell phone and Internet
 ```
 
-## Utility Expenses over Time
-```{r}
+## Utility Expenses by Month
+```{r monthly-utilities}
 utilities_total_cost <- utilities %>% 
   group_by(year, month) %>% 
   summarize(cost = sum(cost), utility = "Total",
-          .groups = "drop") %>% 
+            .groups = "drop") %>% 
   bind_rows(utilities)
 utilities_total_cost$utility <- factor(utilities_total_cost$utility, 
                                        levels = c(setdiff(levels(as.factor(utilities_total_cost$utility)),
@@ -291,7 +291,6 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
 
 utilities_palette <- hue_pal()(4)
 
-# Try looking at costs on a quarterly basis, so all are on the same scale??
 utilities_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility)) +
   geom_line() +
@@ -310,5 +309,39 @@ utilities_total_cost %>%
        col = "Utility")
 ```
 
+
+## Utility Expenses by Quarter
+Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
+```{r monthly-utilities}
+# Group by year and quarter (yearquarter()?)
+utilities_qtr <- utilities %>% 
+  mutate(quarter = yearquarter(date)) %>% 
+  group_by(utility, quarter) %>% 
+  summarize(cost = sum(cost), .groups = "drop")
+
+utilities_qtr_cost <- utilities_qtr %>% 
+  group_by(quarter) %>% 
+  summarize(cost = sum(cost), utility = "Total",
+            .groups = "drop") %>% 
+  bind_rows(utilities_qtr)
+utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility, 
+                                     levels = levels(utilities_total_cost$utility))
+
+utilities_qtr_cost %>% 
+  ggplot(aes(x = quarter, y = cost, col = utility)) +
+  geom_line() +
+  # geom_point(size = 1) +
+  scale_x_yearquarter(date_labels = "%b %Y") +
+  scale_color_manual(values = c("Electricity" = utilities_palette[2], 
+                                "Water" = utilities_palette[3],
+                                "Phone" = utilities_palette[1],
+                                "Internet" = utilities_palette[4],
+                                "Total" = "black")) +
+  theme(legend.position = "bottom") +
+  labs(title = "Utility Costs by Quarter",
+       x = "Quarter", 
+       y = "Cost ($)",
+       col = "Utility")
+```
 
 # Overall Monthly Expenses
