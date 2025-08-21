@@ -59,8 +59,7 @@ grocery$store_label <- factor(grocery$store_label,
                                          "Other")
 )
 
-grocery_last365 <- filter(grocery, date >= as.Date("2025-01-09")) # Once a year has passed, change this to the last 365 days
-# grocery_last365 <- filter(grocery, date >= today() - days(365))
+grocery_last365 <- filter(grocery, date >= today() - days(365))
 ```
 
 ## Grocery Expenses over Time
@@ -212,7 +211,7 @@ grocery_month_summary %>%
 ## Grocery Expenses by Store
 For the store analysis, we include the inconsistent receipts saved prior to 01/09/2025. The table is sorted in descending order by number of trips.
 
-```{r grocery-stores-week}
+```{r grocery-stores-week, out.width="50%", fig.align="default"}
 grocery %>% 
   group_by(store) %>% 
   summarize(trips = n(), 
@@ -233,6 +232,17 @@ grocery %>%
                          format(max(grocery$date), "%m/%d/%Y")),
        x = "Store", 
        y = "Expenditure ($)") +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
+
+grocery %>% 
+  ggplot(aes(x = store_label, y = items)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Items per Trip by Store",
+       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
+                         format(max(grocery$date), "%m/%d/%Y")),
+       x = "Store", 
+       y = "Number of Items Purchased") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
 ```
@@ -312,8 +322,10 @@ utilities_total_cost %>%
 
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
-```{r monthly-utilities}
-# Group by year and quarter (yearquarter()?)
+
+Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data.
+
+```{r quarterly-utilities}
 utilities_qtr <- utilities %>% 
   mutate(quarter = yearquarter(date)) %>% 
   group_by(utility, quarter) %>% 
