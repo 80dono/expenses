@@ -66,7 +66,7 @@ grocery_last365 <- filter(grocery, date >= today() - days(365))
 
 ## Grocery Expenses over Time
 ### Grocery Expenses by Week
-From 01/09/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
+From 01/09/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week. All data and calculations going forward will only use the last 365 days as reference.
 
 Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than three times are grouped as "Other".
 
@@ -292,7 +292,7 @@ grocery %>%
   theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
         plot.caption = element_text(hjust = 0))
   
-# t-test for difference of means in number of items and total cost (check assumptions first!)
+# t-test for difference of means in number of items and in total cost (check assumptions first!)
 ```
 
 
