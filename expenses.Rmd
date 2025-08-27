@@ -34,6 +34,7 @@ theme_update(plot.title = element_text(hjust = 0.5),
              panel.grid.major = element_blank(),
              panel.grid.minor = element_blank(),
              axis.line = element_line(color = "black"))
+palette4 <- hue_pal()(4)
 ```
 
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
@@ -274,10 +275,48 @@ The dashed line in the plot above represents the overall average cost per item (
 
 
 # Credit Cards
+To better examine overall spending, we will look at the monthly statements for each of our credit cards, as these are the primary means we use for purchasing things.
+```{r credit-card-data, include=FALSE}
+cc_sheet <- get_credit_card_data(authenticated)
+cc <- cc_sheet %>% 
+  arrange(date) %>% 
+  mutate(date = as.Date(date),
+         year = year(date),
+         month = floor_date(date, unit = "month"))
+```
 
+## Credit Card Expenses by Month
+Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days.
+```{r monthly-credit-cards}
+cc_total_cost <- cc %>% 
+  group_by(year, month) %>% 
+  summarize(cost = sum(cost), card = "Total",
+            .groups = "drop") %>% 
+  bind_rows(cc)
+cc_total_cost$card <- factor(cc_total_cost$card, 
+                             levels = c(setdiff(levels(as.factor(cc_total_cost$card)),
+                                                "Total"), 
+                                        "Total"))
+
+cc_total_cost %>% 
+  ggplot(aes(x = month, y = cost, col = card)) +
+  geom_line() +
+  scale_x_date(date_labels = "%b %Y") +
+  # scale_y_continuous(n.breaks = 10) +
+  scale_color_manual(values = c("PNC" = palette4[2], 
+                                "Sapphire" = palette4[3],
+                                "United" = palette4[1],
+                                "USAA" = palette4[4],
+                                "Total" = "black")) +
+  theme(legend.position = "bottom") +
+  labs(title = "Credit Card Expenses by Month",
+       x = "Month", 
+       y = "Statement Balance ($)",
+       col = "Card")
+```
 
 # Utilities
-We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary.
+We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (so we can avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary.
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
 utilities <- utilities_sheet %>% 
@@ -299,18 +338,16 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
                                                           "Total"), 
                                                   "Total"))
 
-utilities_palette <- hue_pal()(4)
-
 utilities_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility)) +
   geom_line() +
   geom_point(size = 1) +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
-  scale_color_manual(values = c("Electricity" = utilities_palette[2], 
-                                "Water" = utilities_palette[3],
-                                "Phone" = utilities_palette[1],
-                                "Internet" = utilities_palette[4],
+  scale_color_manual(values = c("Electricity" = palette4[2], 
+                                "Water" = palette4[3],
+                                "Phone" = palette4[1],
+                                "Internet" = palette4[4],
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Month",
