@@ -49,6 +49,7 @@ grocery <- grocery_sheet %>%
   mutate(date = as.Date(date),
          store = as.factor(store),
          cost_per_item = cost / items,
+         shopper = as.factor(shopper),
          week = floor_date(date, unit = "week"),
          month = floor_date(date, unit = "month"),
          year = year(date)) %>% 
@@ -267,11 +268,32 @@ grocery %>%
        x = "Number of Items Purchased",
        y = "Expenditure ($)",
        col = NULL) +
-  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.75), 
+  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
         plot.caption = element_text(hjust = 0))
 ```
 
 The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
+
+## Grocery Expenses by Shopper
+One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025.
+```{r shopper-analysis}
+grocery %>% 
+  drop_na() %>% 
+  group_by(shopper) %>% 
+  mutate(shopper_label = paste0(shopper, " (", n(), " trips)")) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = items, y = cost, col = shopper_label)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
+  labs(title = "Items Purchased and Cost by Shopper",
+       x = "Number of Items Purchased",
+       y = "Expenditure ($)",
+       col = NULL) +
+  theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
+        plot.caption = element_text(hjust = 0))
+  
+# t-test for difference of means in number of items and total cost (check assumptions first!)
+```
 
 
 # Credit Cards

@@ -19,6 +19,7 @@ generate_sample_grocery_data <- function(months = 5, trips_per_month = 15) {
   # Cost per item is right skewed with a minimum of $2 and maximum of $15
   cost <- items * (2 + (rbeta(trips, 6, 30) * 14)) %>% 
     round(2)
+  shopper <- sample(c("Jack", "Jill", "Both"), trips, prob = c(0.4, 0.45, 0.15))
   
-  return(data.frame(date, cost, items, store, real = FALSE))
+  return(data.frame(date, cost, items, store, shopper, real = FALSE))
 }
