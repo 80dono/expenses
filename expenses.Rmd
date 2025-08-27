@@ -376,15 +376,17 @@ utilities_qtr_cost <- utilities_qtr %>%
 utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility, 
                                      levels = levels(utilities_total_cost$utility))
 
+# Add dotted line projection for rest of current quarter?
+# Ex. If the last monthly statement occurred 1/3 of the way through the quarter, multiply by 3 to get projection for the full quarter
+# Add dotted line (separate geom_line) from value of last full quarter to value of projection
 utilities_qtr_cost %>% 
   ggplot(aes(x = quarter, y = cost, col = utility)) +
   geom_line() +
-  # geom_point(size = 1) +
   scale_x_yearquarter(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Electricity" = utilities_palette[2], 
-                                "Water" = utilities_palette[3],
-                                "Phone" = utilities_palette[1],
-                                "Internet" = utilities_palette[4],
+  scale_color_manual(values = c("Electricity" = palette4[2], 
+                                "Water" = palette4[3],
+                                "Phone" = palette4[1],
+                                "Internet" = palette4[4],
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Quarter",
