@@ -279,6 +279,7 @@ One shopper may be more prone to over-buying than the other. Do we see this in t
 ```{r shopper-analysis}
 grocery %>% 
   drop_na() %>% 
+  # Add number of trips per shopper
   group_by(shopper) %>% 
   mutate(shopper_label = paste0(shopper, " (", n(), " trips)")) %>% 
   ungroup() %>% 
@@ -338,7 +339,7 @@ cc_total_cost %>%
 ```
 
 # Utilities
-We will now examine the costs associated with utilities - specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (so we can avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary.
+We will now examine the costs associated with utilities -- specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (so we can avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary.
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
 utilities <- utilities_sheet %>% 
@@ -382,28 +383,42 @@ utilities_total_cost %>%
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
 
-Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data.
+Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data. As such, we have scaled the data to the full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the total.
 
 ```{r quarterly-utilities}
 utilities_qtr <- utilities %>% 
   mutate(quarter = yearquarter(date)) %>% 
   group_by(utility, quarter) %>% 
-  summarize(cost = sum(cost), .groups = "drop")
+  summarize(cost = sum(cost), num_bills = n(), .groups = "drop")
 
 utilities_qtr_cost <- utilities_qtr %>% 
   group_by(quarter) %>% 
-  summarize(cost = sum(cost), utility = "Total",
+  summarize(cost = sum(cost), num_bills = n(), utility = "Total",
             .groups = "drop") %>% 
   bind_rows(utilities_qtr)
 utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility, 
                                      levels = levels(utilities_total_cost$utility))
 
-# Add dotted line projection for rest of current quarter?
-# Ex. If the last monthly statement occurred 1/3 of the way through the quarter, multiply by 3 to get projection for the full quarter
-# Add dotted line (separate geom_line) from value of last full quarter to value of projection
+utilities_qtr_proj <- utilities_qtr %>% 
+  filter(utility != "Water", num_bills < 3, 
+         quarter > yearquarter(as.Date("9/30/2024", "%m/%d/%Y"))) %>% 
+  mutate(proj_cost = round(cost * (3 / num_bills), 2)) %>% 
+  bind_rows(data.frame(utility = "Water", 
+                       quarter = .$quarter[1],
+                       proj_cost = round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2))) %>%
+  bind_rows(data.frame(utility = "Total", 
+                       quarter = .$quarter[1],
+                       cost = sum(.$cost), 
+                       num_bills = sum(.$num_bills), 
+                       proj_cost = round(sum(.$proj_cost), 2)),
+            mutate(filter(utilities_qtr_cost, quarter == .$quarter[1] - 1),
+                   proj_cost = cost)) # Note: num_bills for Total will be incorrect
+
 utilities_qtr_cost %>% 
+  filter(quarter < max(quarter)) %>% 
   ggplot(aes(x = quarter, y = cost, col = utility)) +
   geom_line() +
+  geom_line(data = utilities_qtr_proj, aes(x = quarter, y = proj_cost, col = utility), linetype = 2) +
   scale_x_yearquarter(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = palette4[2], 
                                 "Water" = palette4[3],
@@ -412,6 +427,7 @@ utilities_qtr_cost %>%
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Quarter",
+       subtitle = paste0("Projections based on ", filter(utilities_qtr_proj, utility == "Electricity", quarter == max(quarter))$num_bills, " months of bills from the final quarter."),
        x = "Quarter", 
        y = "Cost ($)",
        col = "Utility")
