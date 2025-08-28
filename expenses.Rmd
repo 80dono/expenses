@@ -55,7 +55,7 @@ grocery <- grocery_sheet %>%
          month = floor_date(date, unit = "month"),
          year = year(date)) %>% 
   group_by(store) %>% 
-  mutate(store_label = as.factor(ifelse(n() < 3, "Other", as.character(store)))) %>% 
+  mutate(store_label = as.factor(ifelse(n() < 5, "Other", as.character(store)))) %>% 
   ungroup()
 grocery$store_label <- factor(grocery$store_label, 
                               levels = c(setdiff(levels(grocery$store_label), "Other"), 
@@ -69,7 +69,7 @@ grocery_last365 <- filter(grocery, date >= today() - days(365))
 ### Grocery Expenses by Week
 From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week. All grocery data going forward will only use the last 365 days as reference.
 
-Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than three times are grouped as "Other".
+Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
 
 ```{r grocery-week}
 mean_weekly_cost <- mean(summarize(group_by(grocery_last365, week), 
@@ -125,7 +125,7 @@ grocery_week_summary %>%
        size = "Trips")
 ```
 
-The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered (+/- 0.25 trips) to reduce overlap; trips can only be a whole number.
+The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm 0.25$ trips) to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
 week_fit <- lm(cost ~ poly(trips, 3), data = grocery_week_summary)
@@ -258,7 +258,7 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered (+/- 0.5 items) to improve visualization.
+We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm 0.5$ items) to improve visualization.
 
 ```{r item-cost-scatterplot}
 grocery %>% 
@@ -452,7 +452,7 @@ utilities_qtr_proj <- utilities_qtr %>%
                        num_bills = sum(.$num_bills), 
                        proj_cost = round(sum(.$proj_cost), 2)),
             mutate(filter(utilities_qtr_cost, quarter == .$quarter[1] - 1),
-                   proj_cost = cost)) # Note: num_bills for Total will be incorrect
+                   proj_cost = cost))
 
 utilities_qtr_cost %>% 
   filter(quarter < max(quarter)) %>% 
