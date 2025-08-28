@@ -18,8 +18,9 @@ library(tsibble)
 authenticated <- FALSE
 tryCatch(
   {
-    # Create email.txt file (not included in Git repo)
-    # Set use_oob = FALSE for initial run
+    # Initial steps:
+    #    - Create email.txt file (not included in Git repo)
+    #    - Set use_oob = FALSE for initial run
     gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
     authenticated <- TRUE
   },
@@ -101,6 +102,8 @@ grocery_week_summary <- grocery_last365 %>%
 grocery_week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
   geom_line(col = "blue") +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
+              col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Trips to the Grocery Store by Week",
@@ -109,8 +112,9 @@ grocery_week_summary %>%
 
 grocery_week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
-  geom_line() +
-  geom_point(aes(size = trips), col = "blue") +
+  geom_line(col = "blue") +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
+              col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   guides(size = guide_legend(nrow = 1)) +
@@ -121,7 +125,7 @@ grocery_week_summary %>%
        size = "Trips")
 ```
 
-The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered to reduce overlap; trips can only be a whole number.
+The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered (+/- 0.25 trips) to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
 week_fit <- lm(cost ~ poly(trips, 3), data = grocery_week_summary)
@@ -172,6 +176,8 @@ grocery_month_summary <- grocery_last365 %>%
 grocery_month_summary %>% 
   ggplot(aes(x = month, y = trips)) +
   geom_line(col = "blue") +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
+              col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
@@ -182,8 +188,9 @@ grocery_month_summary %>%
 
 grocery_month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
-  geom_line() +
-  geom_point(aes(size = trips), col = "blue") +
+  geom_line(col = "blue") +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
+              col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "top") +
@@ -232,7 +239,7 @@ grocery %>%
   labs(title = "Distribution of Expenditures by Store",
        subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
                          format(max(grocery$date), "%m/%d/%Y")),
-       x = "Store", 
+       x = NULL, 
        y = "Expenditure ($)") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
@@ -243,7 +250,7 @@ grocery %>%
   labs(title = "Distribution of Items per Trip by Store",
        subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
                          format(max(grocery$date), "%m/%d/%Y")),
-       x = "Store", 
+       x = NULL, 
        y = "Number of Items Purchased") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
@@ -251,13 +258,13 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted, though all stores are included in the overall average cost line (dashed).
+We will now plot the ratio of number of items and cost. Only stores that have been visited three or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered (+/- 0.5 items) to improve visualization.
 
 ```{r item-cost-scatterplot}
 grocery %>% 
   filter(store_label != "Other") %>% # Only include stores that have been visited 3+ times
   ggplot(aes(x = items, y = cost, col = store)) +
-  geom_point(size = 2) +
+  geom_jitter(size = 2, width = 0.5, height = 0) +
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
               linetype = "dashed", linewidth = 1) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
@@ -296,6 +303,38 @@ grocery %>%
 # t-test for difference of means in number of items and in total cost (check assumptions first!)
 ```
 
+```{r shopper-distributions, out.width="50%", fig.align="default"}
+grocery %>% 
+  drop_na() %>% 
+  group_by(shopper) %>% 
+  summarize(trips = n(), 
+            mean_items = format(round(mean(items), 2), nsmall = 2),
+            sd_items = format(round(sd(items), 2), nsmall = 2), 
+            mean_cost = format(round(mean(cost), 2), nsmall = 2), 
+            sd_cost = format(round(sd(cost), 2), nsmall = 2),
+            mean_cost_per_item = format(round(sum(cost) / sum(items), 2), nsmall = 2)) %>% 
+  datatable()
+
+grocery %>% 
+  drop_na() %>% 
+  ggplot(aes(x = shopper, y = cost)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Expenditures by Shopper",
+       x = NULL, 
+       y = "Expenditure ($)") +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
+
+grocery %>% 
+  drop_na() %>% 
+  ggplot(aes(x = shopper, y = items)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Items per Trip by Shopper",
+       x = NULL, 
+       y = "Number of Items Purchased") +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
+```
 
 # Credit Cards
 To better examine overall spending, we will look at the monthly statements for each of our credit cards, as these are the primary means we use for purchasing things.
@@ -310,6 +349,7 @@ cc <- cc_sheet %>%
 
 ## Credit Card Expenses by Month
 Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days.
+
 ```{r monthly-credit-cards}
 cc_total_cost <- cc %>% 
   group_by(year, month) %>% 
@@ -326,16 +366,16 @@ cc_total_cost %>%
   geom_line() +
   scale_x_date(date_labels = "%b %Y") +
   # scale_y_continuous(n.breaks = 10) +
-  scale_color_manual(values = c("PNC" = palette4[2], 
-                                "Sapphire" = palette4[3],
-                                "United" = palette4[1],
+  scale_color_manual(values = c("PNC" = palette4[1], 
+                                "Sapphire" = palette4[2],
+                                "United" = palette4[3],
                                 "USAA" = palette4[4],
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Credit Card Expenses by Month",
-       x = "Month", 
+       x = NULL, 
        y = "Statement Balance ($)",
-       col = "Card")
+       col = "Credit Card")
 ```
 
 # Utilities
@@ -374,16 +414,16 @@ utilities_total_cost %>%
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Month",
-       x = "Month", 
+       x = NULL, 
        y = "Cost ($)",
-       col = "Utility")
+       col = NULL)
 ```
 
 
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
 
-Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data. As such, we have scaled the data to the full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the total.
+Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data. As such, we have scaled the data for the months we do have to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total.
 
 ```{r quarterly-utilities}
 utilities_qtr <- utilities %>% 
@@ -393,7 +433,7 @@ utilities_qtr <- utilities %>%
 
 utilities_qtr_cost <- utilities_qtr %>% 
   group_by(quarter) %>% 
-  summarize(cost = sum(cost), num_bills = n(), utility = "Total",
+  summarize(cost = sum(cost), utility = "Total",
             .groups = "drop") %>% 
   bind_rows(utilities_qtr)
 utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility, 
@@ -427,10 +467,10 @@ utilities_qtr_cost %>%
                                 "Total" = "black")) +
   theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Quarter",
-       subtitle = paste0("Projections based on ", filter(utilities_qtr_proj, utility == "Electricity", quarter == max(quarter))$num_bills, " months of bills from the final quarter."),
+       subtitle = paste0("Projections based on ", filter(utilities_qtr_proj, utility == "Electricity", quarter == max(quarter))$num_bills, " months of bills from the current quarter."),
        x = "Quarter", 
        y = "Cost ($)",
-       col = "Utility")
+       col = NULL)
 ```
 
 # Overall Monthly Expenses
