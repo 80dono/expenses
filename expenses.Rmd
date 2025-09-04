@@ -14,6 +14,7 @@ library(googlesheets4)
 library(DT)
 library(scales)
 library(tsibble)
+library(cowplot)
 
 authenticated <- FALSE
 tryCatch(
@@ -125,7 +126,7 @@ grocery_week_summary %>%
        size = "Trips")
 ```
 
-The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm 0.25$ trips) to reduce overlap; trips can only be a whole number.
+The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm$ 0.25 trips) to reduce overlap; trips can only be a whole number.
 
 ```{r grocery-weekly-cost}
 week_fit <- lm(cost ~ poly(trips, 3), data = grocery_week_summary)
@@ -168,8 +169,10 @@ grocery_last365 %>%
         axis.ticks.x = element_blank())
 ```
 
+For the following plots, we will only show data for completed months; the current month is not included. 
 ```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
 grocery_month_summary <- grocery_last365 %>% 
+  filter(date < floor_date(today(), unit = "months")) %>% 
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
@@ -258,7 +261,7 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm 0.5$ items) to improve visualization.
+We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r item-cost-scatterplot}
 grocery %>% 
@@ -281,8 +284,29 @@ grocery %>%
 
 The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
 
+## Grocery Expenses by Day of Week
+Do we spend more on groceries on certain days of the week? Which days do we most often find ourselves making a trip to the store?
+
+```{r groceries-weekday, out.width="50%", fig.align="default"}
+grocery %>% 
+  mutate(day_of_week = wday(date, label = TRUE, abbr = FALSE, week_start = 1)) %>% 
+  ggplot(aes(x = day_of_week, y = items)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(x = NULL,
+       y = "Number of Items Purchased")
+
+grocery %>% 
+  mutate(day_of_week = wday(date, label = TRUE, abbr = FALSE, week_start = 1)) %>% 
+  ggplot(aes(x = day_of_week, y = cost)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(x = NULL,
+       y = "Expenditure ($)")
+```
+
+
 ## Grocery Expenses by Shopper
 One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025.
+
 ```{r shopper-analysis}
 grocery %>% 
   drop_na() %>% 
@@ -293,14 +317,15 @@ grocery %>%
   ggplot(aes(x = items, y = cost, col = shopper_label)) +
   geom_point() +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
+  geom_smooth(data = grocery, mapping = aes(x = items, y = cost), 
+              col = "black", linetype = "dashed",
+              method = "lm", formula = "y ~ x", se = FALSE) +
   labs(title = "Items Purchased and Cost by Shopper",
        x = "Number of Items Purchased",
        y = "Expenditure ($)",
        col = NULL) +
   theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
         plot.caption = element_text(hjust = 0))
-  
-# t-test for difference of means in number of items and in total cost (check assumptions first!)
 ```
 
 ```{r shopper-distributions, out.width="50%", fig.align="default"}
@@ -335,6 +360,31 @@ grocery %>%
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
 ```
+
+```{r shopper-assumptions, eval=FALSE}
+# Not enough data to get a nice graph
+plot_grid(grocery %>% 
+            drop_na() %>% 
+            ggplot(aes(cost)) +
+            geom_histogram(bins = 15, col = "white", fill = "blue") +
+            facet_wrap(~shopper),
+          grocery %>% 
+            drop_na() %>% 
+            ggplot(aes(items)) +
+            geom_histogram(bins = 15, col = "white", fill = "blue") +
+            facet_wrap(~shopper) +
+            theme(strip.background = element_blank(),
+                  strip.text.x = element_blank()),
+          nrow = 2)
+```
+
+
+```{r shopper-difference}
+# t-test for difference of means in number of items and in total cost (check assumptions first!)
+# Is this even worth doing since there is an obvious difference? Maybe create confidence interval for how many more items I/we buy than Anna?
+
+```
+
 
 # Credit Cards
 To better examine overall spending, we will look at the monthly statements for each of our credit cards, as these are the primary means we use for purchasing things.
@@ -423,7 +473,7 @@ utilities_total_cost %>%
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
 
-Note: the current date is `r today()`, so the last quarter only contains `r (month(today()) %% 3) - 1` full month(s) of utility data. As such, we have scaled the data for the months we do have to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total.
+Note: the current date is `r format(today(), "%m/%d/%Y")`, so the last quarter only contains `r (month(today())) %% 3` full month(s) of utility data. As such, we have scaled the data for the months we do have to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total.
 
 ```{r quarterly-utilities}
 utilities_qtr <- utilities %>% 
