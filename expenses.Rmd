@@ -238,17 +238,6 @@ grocery %>%
   datatable()
 
 grocery %>% 
-  ggplot(aes(x = store_label, y = cost)) +
-  geom_boxplot(varwidth = TRUE) +
-  labs(title = "Distribution of Expenditures by Store",
-       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
-                         format(max(grocery$date), "%m/%d/%Y")),
-       x = NULL, 
-       y = "Expenditure ($)") +
-  theme(axis.line = element_blank(),
-        axis.ticks.x = element_blank())
-
-grocery %>% 
   ggplot(aes(x = store_label, y = items)) +
   geom_boxplot(varwidth = TRUE) +
   labs(title = "Distribution of Items per Trip by Store",
@@ -256,6 +245,17 @@ grocery %>%
                          format(max(grocery$date), "%m/%d/%Y")),
        x = NULL, 
        y = "Number of Items Purchased") +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
+
+grocery %>% 
+  ggplot(aes(x = store_label, y = cost)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Expenditures by Store",
+       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
+                         format(max(grocery$date), "%m/%d/%Y")),
+       x = NULL, 
+       y = "Expenditure ($)") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
 ```
@@ -306,7 +306,7 @@ grocery %>%
 
 
 ## Grocery Expenses by Shopper
-One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025.
+One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025. The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r shopper-analysis}
 grocery %>% 
@@ -316,7 +316,7 @@ grocery %>%
   mutate(shopper_label = paste0(shopper, " (", n(), " trips)")) %>% 
   ungroup() %>% 
   ggplot(aes(x = items, y = cost, col = shopper_label)) +
-  geom_point() +
+  geom_jitter(width = 0.5, height = 0) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
   geom_smooth(data = grocery, mapping = aes(x = items, y = cost), 
               col = "black", linetype = "dashed",
@@ -343,21 +343,21 @@ grocery %>%
 
 grocery %>% 
   drop_na() %>% 
-  ggplot(aes(x = shopper, y = cost)) +
-  geom_boxplot(varwidth = TRUE) +
-  labs(title = "Distribution of Expenditures by Shopper",
-       x = NULL, 
-       y = "Expenditure ($)") +
-  theme(axis.line = element_blank(),
-        axis.ticks.x = element_blank())
-
-grocery %>% 
-  drop_na() %>% 
   ggplot(aes(x = shopper, y = items)) +
   geom_boxplot(varwidth = TRUE) +
   labs(title = "Distribution of Items per Trip by Shopper",
        x = NULL, 
        y = "Number of Items Purchased") +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank())
+
+grocery %>% 
+  drop_na() %>% 
+  ggplot(aes(x = shopper, y = cost)) +
+  geom_boxplot(varwidth = TRUE) +
+  labs(title = "Distribution of Expenditures by Shopper",
+       x = NULL, 
+       y = "Expenditure ($)") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank())
 ```
@@ -429,7 +429,7 @@ cc_total_cost %>%
 ```
 
 # Utilities
-We will now examine the costs associated with utilities -- specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (so we can avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary. All utilities except electricity are billed at the beginning of the following month; electricity is billed at the end of the month (billing periods do not fully overlap with calendar months).
+We will now examine the costs associated with utilities -- specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (to avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary. All utilities except electricity are billed at the beginning of the following month; electricity is billed at the end of the month (billing periods do not fully overlap with calendar months).
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
 utilities <- utilities_sheet %>% 
