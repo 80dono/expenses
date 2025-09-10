@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
 library(googlesheets4)
+library(scales, include.only = "dollar")
 library(plotly)
 library(DT)
 library(scales)
@@ -96,7 +97,7 @@ grocery_last365 %>%
 
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change. Only includes full weeks (does not include the current week, unlike the plot above).
 
-```{r grocery-week-trips-cost, out.width="50%", fig.align="default", warning = FALSE}
+```{r grocery-week-trips-cost, out.width="50%", fig.align="default", warning=FALSE}
 grocery_week_summary <- grocery_last365 %>%
   filter(date < floor_date(today(), unit = "week", week_start = 1)) %>% 
   group_by(year, week) %>%
@@ -104,13 +105,13 @@ grocery_week_summary <- grocery_last365 %>%
 
 grocery_week_trips <- grocery_week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
-  geom_line(aes(text = paste0("Week: ", week, "<br>Trips: ", trips, "<br>Cost: $", cost),
+  geom_line(aes(text = paste0("Week: ", week, "<br>Trips: ", trips, 
+                              "<br>Expenditure: $", cost),
                 group = 1), 
             col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
-  # scale_y_continuous(n.breaks = 10) +
   labs(title = "Trips to the Grocery Store by Week",
        x = "Week", 
        y = "Number of Trips")
@@ -118,15 +119,13 @@ ggplotly(grocery_week_trips, tooltip = "text")
 
 grocery_week_cost <- grocery_week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
-  geom_line(aes(text = paste0("Week: ", week, "<br>Cost: $", cost, "<br>Trips: ", trips),
+  geom_line(aes(text = paste0("Week: ", week, "<br>Expenditure: ", dollar(cost), 
+                              "<br>Trips: ", trips),
                 group = 1),
             col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
-  # scale_y_continuous(n.breaks = 10) +
-  guides(size = guide_legend(nrow = 1)) +
-  theme(legend.position = "top") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
        y = "Expenditure ($)")
@@ -135,20 +134,23 @@ ggplotly(grocery_week_cost, tooltip = "text")
 
 The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm$ 0.25 trips) to reduce overlap; trips can only be a whole number.
 
-```{r grocery-weekly-cost}
+```{r grocery-weekly-cost, warning=FALSE}
 week_fit <- lm(cost ~ poly(trips, 3), data = grocery_week_summary)
 r2_week <- summary(week_fit)$r.squared
 
-grocery_week_summary %>% 
+grocery_week_trips_cost <- grocery_week_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
-  geom_jitter(width = 0.25, height = 0) +
+  geom_jitter(aes(text = paste0("Week: ", week, "<br>Trips: ", trips, 
+                                "<br>Expenditure: ", dollar(cost)),
+                  group = 1), 
+              width = 0.25, height = 0) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(n.breaks = 10) +
-  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery_last365, week)$cost)), 25)) +
   labs(title = "Weekly Cost by Number of Trips",
        subtitle = paste0("R-squared = ", round(r2_week, 2)),
        x = "Trips per Week",
        y = "Weekly Expenditure ($)")
+ggplotly(grocery_week_trips_cost, tooltip = "text")
 ```
 
 ### Grocery Expenses by Month
@@ -177,53 +179,63 @@ grocery_last365 %>%
 ```
 
 For the following plots, we will only show data for completed months; the current month is not included. 
-```{r grocery-month-trips-cost, out.width="50%", fig.align="default"}
+```{r grocery-month-trips-cost, out.width="50%", fig.align="default", warning=FALSE}
 grocery_month_summary <- grocery_last365 %>% 
   filter(date < floor_date(today(), unit = "months")) %>% 
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
-grocery_month_summary %>% 
+grocery_month_trips <- grocery_month_summary %>% 
   ggplot(aes(x = month, y = trips)) +
-  geom_line(col = "blue") +
+  geom_line(aes(text = paste0("<b>", format(month, "%B %Y"), "</b><br>Trips: ", trips, 
+                              "<br>Expenditure: ", dollar(cost)),
+                group = 1),
+            col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
-  # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "bottom") +
   labs(title = "Trips to the Grocery Store by Month",
        x = "Month", 
        y = "Number of Trips",
        col = "Expenditure ($)")
+ggplotly(grocery_month_trips, tooltip = "text")
 
-grocery_month_summary %>% 
+grocery_month_cost <- grocery_month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
-  geom_line(col = "blue") +
+  geom_line(aes(text = paste0("<b>", format(month, "%B %Y"), "</b><br>Expenditure: ", 
+                              dollar(cost), "<br>Trips: ", trips),
+                group = 1),,
+            col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
-  # scale_y_continuous(n.breaks = 10) +
   theme(legend.position = "top") +
   labs(title = "Grocery Expenses by Month",
        x = "Month", 
-       y = "Expenditure ($)",
-       size = "Trips")
+       y = "Expenditure ($)")
+ggplotly(grocery_month_cost, tooltip = "text")
 ```
 
-```{r grocery-monthly-cost}
+For the plot below, points have been jittered ($\pm$ 0.5 trips) to reduce overlap; trips can only be a whole number.
+
+```{r grocery-monthly-cost, warning=FALSE}
 month_fit <- lm(cost ~ poly(trips, 3), data = grocery_month_summary)
 r2_month <- summary(month_fit)$r.squared
 
-grocery_month_summary %>% 
+grocery_month_trips_cost <- grocery_month_summary %>% 
   ggplot(aes(x = trips, y = cost)) +
-  geom_point() +
+  geom_jitter(aes(text = paste0("<b>", format(month, "%B %Y"), "</b><br>Trips: ", trips, 
+                               "<br>Expenditure: ", dollar(cost)),
+                  group = 1),
+              width = 0.5, height = 0) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
   scale_x_continuous(breaks = seq(2, max(count(grocery_last365, month)$n), 2)) +
-  # scale_y_continuous(breaks = seq(0, max(sum(group_by(grocery_last365, month)$cost)), 50)) +
   labs(title = "Monthly Cost by Number of Trips",
        subtitle = paste0("R-squared = ", round(r2_month, 2)),
        x = "Trips",
        y = "Monthly Total ($)")
+ggplotly(grocery_month_trips_cost, tooltip = "text")
 ```
 
 
@@ -418,8 +430,10 @@ cc_total_cost$card <- factor(cc_total_cost$card,
                                                 "Total"), 
                                         "Total"))
 
-cc_total_cost %>% 
-  ggplot(aes(x = month, y = cost, col = card)) +
+cc_cost_plot <- cc_total_cost %>% 
+  ggplot(aes(x = month, y = cost, col = card, group = card,
+             text = paste0("<b>", card, "</b><br><i>", format(month, "%B %Y"), 
+                           "</i><br>Balance: ", dollar(cost)))) +
   geom_line() +
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("PNC" = palette4[1], 
@@ -427,11 +441,13 @@ cc_total_cost %>%
                                 "United" = palette4[3],
                                 "USAA" = palette4[4],
                                 "Total" = "black")) +
-  theme(legend.position = "bottom") +
   labs(title = "Credit Card Expenses by Month",
        x = NULL, 
        y = "Statement Balance ($)",
        col = "Credit Card")
+ggplotly(cc_cost_plot, tooltip = "text") %>% 
+  layout(legend = list(x = 0.4, xanchor = "center", y = -0.1,
+                       orientation = "h"))
 ```
 
 # Utilities
@@ -446,7 +462,8 @@ utilities <- utilities_sheet %>%
 ```
 
 ## Utility Expenses by Month
-```{r monthly-utilities}
+Points have been added to the line plot below to highlight the fact that water is billed on a quarterly basis, as opposed to the other utilities. Consequently, its line does not have a point at each month. This explains some of the spiking in the total that may otherwise appear confusing, as every three months essentially has an extra bill.
+```{r monthly-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
   group_by(year, month) %>% 
   summarize(cost = sum(cost), utility = "Total",
@@ -457,21 +474,26 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
                                                           "Total"), 
                                                   "Total"))
 
-utilities_total_cost %>% 
+utilities_cost_plot <- utilities_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility)) +
   geom_line() +
-  geom_point(size = 1) +
+  geom_point(aes(text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
+                               "</i><br>Cost: ", dollar(cost)), 
+                 group = utility), 
+             size = 1) +
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = palette4[2], 
                                 "Water" = palette4[3],
                                 "Phone" = palette4[1],
                                 "Internet" = palette4[4],
                                 "Total" = "black")) +
-  theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Month",
        x = NULL, 
        y = "Cost ($)",
        col = NULL)
+ggplotly(utilities_cost_plot, tooltip = "text") %>% 
+  layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
+                       orientation = "h"))
 ```
 
 
@@ -480,7 +502,7 @@ Since water is billed on a quarterly, rather than monthly basis, we will aggrega
 
 Note: the current date is `r format(today(), "%m/%d/%Y")`, so the last quarter only contains `r (month(today())) %% 3` full month(s) of utility data. As such, we have scaled the data for the months we do have to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total.
 
-```{r quarterly-utilities}
+```{r quarterly-utilities, warning=FALSE}
 utilities_qtr <- utilities %>% 
   mutate(quarter = yearquarter(date)) %>% 
   group_by(utility, quarter) %>% 
@@ -509,23 +531,41 @@ utilities_qtr_proj <- utilities_qtr %>%
             mutate(filter(utilities_qtr_cost, quarter == .$quarter[1] - 1),
                    proj_cost = cost))
 
-utilities_qtr_cost %>% 
+utilities_qtr_cost_plot <- utilities_qtr_cost %>% 
   filter(quarter < max(quarter)) %>% 
   ggplot(aes(x = quarter, y = cost, col = utility)) +
-  geom_line() +
-  geom_line(data = utilities_qtr_proj, aes(x = quarter, y = proj_cost, col = utility), linetype = 2) +
+  # Plot the actual data first so legend displays solid lines
+  geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
+                              "</i><br>Cost: ", dollar(cost)), 
+                group = utility)) +
+  # Plot projections
+  geom_line(data = utilities_qtr_proj, 
+            aes(x = quarter, y = proj_cost, col = utility, group = utility, 
+                text = paste0("<b>", utility, " (Projected)</b><br><i>", quarter,
+                               "<br>Projected Cost: ", dollar(proj_cost))), 
+            linetype = 2, show.legend = FALSE) +
+  # Re-add most recent (complete) quarter to supersede projection hover text
+  geom_line(data = filter(utilities_qtr_cost, quarter == min(utilities_qtr_proj$quarter)),
+            aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
+                              "</i><br>Cost: ", dollar(cost)), 
+                group = utility)) +
   scale_x_yearquarter(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = palette4[2], 
                                 "Water" = palette4[3],
                                 "Phone" = palette4[1],
                                 "Internet" = palette4[4],
                                 "Total" = "black")) +
-  theme(legend.position = "bottom") +
   labs(title = "Utility Costs by Quarter",
-       subtitle = paste0("Projections based on ", filter(utilities_qtr_proj, utility == "Electricity", quarter == max(quarter))$num_bills, " months of bills from the current quarter."),
-       x = "Quarter", 
+       subtitle = paste0("Projections based on ", 
+                         filter(utilities_qtr_proj, utility == "Electricity", 
+                                quarter == max(quarter))$num_bills, 
+                         " months of bills from the current quarter."),
+       x = NULL, 
        y = "Cost ($)",
        col = NULL)
+ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>% 
+  layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
+                       orientation = "h"))
 ```
 
 # Overall Monthly Expenses
