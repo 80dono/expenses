@@ -11,10 +11,9 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
 library(googlesheets4)
-library(scales, include.only = "dollar")
+library(scales)
 library(plotly)
 library(DT)
-library(scales)
 library(tsibble)
 library(cowplot)
 
