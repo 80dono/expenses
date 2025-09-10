@@ -96,7 +96,7 @@ grocery_last365 %>%
 
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change. Only includes full weeks (does not include the current week, unlike the plot above).
 
-```{r grocery-week-trips-cost, out.width="50%", fig.align="default", warning=FALSE}
+```{r grocery-week-trips-cost, out.width="100%", warning=FALSE}
 grocery_week_summary <- grocery_last365 %>%
   filter(date < floor_date(today(), unit = "week", week_start = 1)) %>% 
   group_by(year, week) %>%
@@ -111,10 +111,10 @@ grocery_week_trips <- grocery_week_summary %>%
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
-  labs(title = "Trips to the Grocery Store by Week",
+  labs(title = "Grocery Trips by Week",
        x = "Week", 
        y = "Number of Trips")
-ggplotly(grocery_week_trips, tooltip = "text")
+p1_week <- ggplotly(grocery_week_trips, tooltip = "text")
 
 grocery_week_cost <- grocery_week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
@@ -128,7 +128,10 @@ grocery_week_cost <- grocery_week_summary %>%
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
        y = "Expenditure ($)")
-ggplotly(grocery_week_cost, tooltip = "text")
+p2_week <- ggplotly(grocery_week_cost, tooltip = "text") %>% 
+  layout(title = list(text = "Grocery Trips and Expenses by Week", x = 0.5))
+
+subplot(p1_week, p2_week, nrows = 1, margin = 0.05, titleY = TRUE)
 ```
 
 The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm$ 0.25 trips) to reduce overlap; trips can only be a whole number.
@@ -178,7 +181,7 @@ grocery_last365 %>%
 ```
 
 For the following plots, we will only show data for completed months; the current month is not included. 
-```{r grocery-month-trips-cost, out.width="50%", fig.align="default", warning=FALSE}
+```{r grocery-month-trips-cost, out.width="100%", warning=FALSE}
 grocery_month_summary <- grocery_last365 %>% 
   filter(date < floor_date(today(), unit = "months")) %>% 
   group_by(year, month) %>% 
@@ -194,11 +197,11 @@ grocery_month_trips <- grocery_month_summary %>%
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
   theme(legend.position = "bottom") +
-  labs(title = "Trips to the Grocery Store by Month",
+  labs(title = "Grocery Trips by Month",
        x = "Month", 
        y = "Number of Trips",
        col = "Expenditure ($)")
-ggplotly(grocery_month_trips, tooltip = "text")
+p1_month <- ggplotly(grocery_month_trips, tooltip = "text")
 
 grocery_month_cost <- grocery_month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
@@ -213,7 +216,10 @@ grocery_month_cost <- grocery_month_summary %>%
   labs(title = "Grocery Expenses by Month",
        x = "Month", 
        y = "Expenditure ($)")
-ggplotly(grocery_month_cost, tooltip = "text")
+p2_month <- ggplotly(grocery_month_cost, tooltip = "text") %>% 
+  layout(title = list(text = "Grocery Trips and Expenses by Month", x = 0.5))
+
+subplot(p1_month, p2_month, margin = 0.05, titleY = TRUE)
 ```
 
 For the plot below, points have been jittered ($\pm$ 0.5 trips) to reduce overlap; trips can only be a whole number.
@@ -499,7 +505,7 @@ ggplotly(utilities_cost_plot, tooltip = "text") %>%
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
 
-Note: the current date is `r format(today(), "%m/%d/%Y")`, so the last quarter only contains `r (month(today())) %% 3` full month(s) of utility data. As such, we have scaled the data for the months we do have to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total.
+Note: the current date is `r format(today(), "%m/%d/%Y")`, so the last quarter only contains `r (month(today())) %% 3` full month(s) of utility data. Where data is incomplete, we have scaled the available bills to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total. Solid lines denote a full quarter, while dashed lines are a projection based on the months that have already received bills for that utility. Some utilities may be complete before the end of the quarter, while others may not.
 
 ```{r quarterly-utilities, warning=FALSE}
 utilities_qtr <- utilities %>% 
@@ -515,23 +521,26 @@ utilities_qtr_cost <- utilities_qtr %>%
 utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility, 
                                      levels = levels(utilities_total_cost$utility))
 
-utilities_qtr_proj <- utilities_qtr %>% 
-  filter(utility != "Water", num_bills < 3, 
-         quarter > yearquarter(as.Date("9/30/2024", "%m/%d/%Y"))) %>% 
-  mutate(proj_cost = round(cost * (3 / num_bills), 2)) %>% 
-  bind_rows(data.frame(utility = "Water", 
-                       quarter = .$quarter[1],
-                       proj_cost = round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2))) %>%
-  bind_rows(data.frame(utility = "Total", 
-                       quarter = .$quarter[1],
-                       cost = sum(.$cost), 
-                       num_bills = sum(.$num_bills), 
-                       proj_cost = round(sum(.$proj_cost), 2)),
-            mutate(filter(utilities_qtr_cost, quarter == .$quarter[1] - 1),
-                   proj_cost = cost))
+# Construct projections data frame
+proj_data <- utilities_qtr %>%
+  filter(((utility != "Water" & num_bills < 3) | (utility == "Water" & num_bills < 1)),
+         quarter > yearquarter(today()) - 1) %>%
+  mutate(proj_cost = if_else(utility == "Water",
+                             round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2),
+                             round(cost * (3 / num_bills), 2)))
+total_row <- data.frame(utility = "Total",
+                        quarter = proj_data$quarter[1],
+                        cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1], 
+                                      utility == "Total")$cost) %>% 
+  mutate(proj_cost = cost + round(sum(proj_data$proj_cost) - sum(proj_data$cost), 2))
+prev_data <- filter(utilities_qtr_cost, quarter == proj_data$quarter[1] - 1) %>%
+  mutate(proj_cost = cost)
+utilities_qtr_proj <- bind_rows(proj_data, total_row, prev_data)
 
 utilities_qtr_cost_plot <- utilities_qtr_cost %>% 
-  filter(quarter < max(quarter)) %>% 
+  # Show real data where we have it, even if the other utilities are incomplete for the quarter
+  anti_join(filter(utilities_qtr_proj, quarter == max(quarter)), 
+            by = join_by(quarter, utility)) %>% 
   ggplot(aes(x = quarter, y = cost, col = utility)) +
   # Plot the actual data first so legend displays solid lines
   geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
@@ -555,10 +564,6 @@ utilities_qtr_cost_plot <- utilities_qtr_cost %>%
                                 "Internet" = palette4[4],
                                 "Total" = "black")) +
   labs(title = "Utility Costs by Quarter",
-       subtitle = paste0("Projections based on ", 
-                         filter(utilities_qtr_proj, utility == "Electricity", 
-                                quarter == max(quarter))$num_bills, 
-                         " months of bills from the current quarter."),
        x = NULL, 
        y = "Cost ($)",
        col = NULL)
