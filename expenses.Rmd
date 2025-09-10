@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
 library(googlesheets4)
+library(plotly)
 library(DT)
 library(scales)
 library(tsibble)
@@ -95,15 +96,17 @@ grocery_last365 %>%
 
 Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change. Only includes full weeks (does not include the current week, unlike the plot above).
 
-```{r grocery-week-trips-cost, out.width="50%", fig.align="default"}
+```{r grocery-week-trips-cost, out.width="50%", fig.align="default", warning = FALSE}
 grocery_week_summary <- grocery_last365 %>%
   filter(date < floor_date(today(), unit = "week", week_start = 1)) %>% 
   group_by(year, week) %>%
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
 
-grocery_week_summary %>% 
+grocery_week_trips <- grocery_week_summary %>% 
   ggplot(aes(x = week, y = trips)) +
-  geom_line(col = "blue") +
+  geom_line(aes(text = paste0("Week: ", week, "<br>Trips: ", trips, "<br>Cost: $", cost),
+                group = 1), 
+            col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
@@ -111,10 +114,13 @@ grocery_week_summary %>%
   labs(title = "Trips to the Grocery Store by Week",
        x = "Week", 
        y = "Number of Trips")
+ggplotly(grocery_week_trips, tooltip = "text")
 
-grocery_week_summary %>% 
+grocery_week_cost <- grocery_week_summary %>% 
   ggplot(aes(x = week, y = cost)) +
-  geom_line(col = "blue") +
+  geom_line(aes(text = paste0("Week: ", week, "<br>Cost: $", cost, "<br>Trips: ", trips),
+                group = 1),
+            col = "blue") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
@@ -123,8 +129,8 @@ grocery_week_summary %>%
   theme(legend.position = "top") +
   labs(title = "Grocery Expenses by Week",
        x = "Week", 
-       y = "Expenditure ($)",
-       size = "Trips")
+       y = "Expenditure ($)")
+ggplotly(grocery_week_cost, tooltip = "text")
 ```
 
 The following plot displays the relationship between the number of trips taken per week and the total expenditure; each point represents one week. The blue line is a third-degree polynomial fit to the data to show the larger trend. Note that points have been jittered ($\pm$ 0.25 trips) to reduce overlap; trips can only be a whole number.
