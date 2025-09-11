@@ -416,13 +416,13 @@ To better examine overall spending, we will look at the monthly statements for e
 cc_sheet <- get_credit_card_data(authenticated)
 cc <- cc_sheet %>% 
   arrange(date) %>% 
-  mutate(date = as.Date(date),
+  mutate(date = if_else(card == "Discover", as.Date(date) - 1, as.Date(date)),
          year = year(date),
          month = floor_date(date, unit = "month"))
 ```
 
 ## Credit Card Expenses by Month
-Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days.
+Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days. The Discover card is paid off on the first of every month, however we will subtract one day from the payment dates so that they align with the month of expenses that they represent.
 
 ```{r monthly-credit-cards}
 cc_total_cost <- cc %>% 
@@ -441,7 +441,7 @@ cc_cost_plot <- cc_total_cost %>%
                            "</i><br>Balance: ", dollar(cost)))) +
   geom_line() +
   scale_x_date(date_labels = "%b %Y") +
-  scale_color_manual(values = c("PNC" = palette4[1], 
+  scale_color_manual(values = c("Discover" = palette4[1], 
                                 "Sapphire" = palette4[2],
                                 "United" = palette4[3],
                                 "USAA" = palette4[4],
@@ -451,7 +451,7 @@ cc_cost_plot <- cc_total_cost %>%
        y = "Statement Balance ($)",
        col = "Credit Card")
 ggplotly(cc_cost_plot, tooltip = "text") %>% 
-  layout(legend = list(x = 0.4, xanchor = "center", y = -0.1,
+  layout(legend = list(x = 0.45, xanchor = "center", y = -0.1,
                        orientation = "h"))
 ```
 
@@ -505,7 +505,7 @@ ggplotly(utilities_cost_plot, tooltip = "text") %>%
 ## Utility Expenses by Quarter
 Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
 
-Note: the current date is `r format(today(), "%m/%d/%Y")`, so the last quarter only contains `r (month(today())) %% 3` full month(s) of utility data. Where data is incomplete, we have scaled the available bills to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total. Solid lines denote a full quarter, while dashed lines are a projection based on the months that have already received bills for that utility. Some utilities may be complete before the end of the quarter, while others may not.
+Where data is incomplete, we have scaled the available bills to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total. Solid lines denote a full quarter, while dashed lines are a projection based on the months that have already received bills for that utility. Some utilities may be complete before the end of the quarter, while others may not.
 
 ```{r quarterly-utilities, warning=FALSE}
 utilities_qtr <- utilities %>% 
@@ -573,3 +573,40 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ```
 
 # Overall Monthly Expenses
+Putting it all together, we will now plot all our major sources of expense together.
+
+```{r overall-monthly-costs, out.width="100%"}
+total_cc <- filter(cc_total_cost, card == "Total") %>% 
+  select(month, cost)
+total_utils <- filter(utilities_total_cost, utility == "Total") %>% 
+  select(month, cost)
+total_costs <- full_join(total_cc, total_utils, by = "month") %>% 
+  full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
+  drop_na() %>% 
+  rename(cc = cost.x, utils = cost.y, groceries = cost) %>% 
+  mutate(rent = 2685, total = cc + utils + groceries + rent)
+
+total_cost_plot <- total_costs %>% 
+  pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
+  mutate(expense = factor(expense, levels = c("cc", "groceries", "rent", "utils", "total"),
+                          labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total"))) %>% 
+  ggplot(aes(x = month, y = cost, col = expense, group = expense,
+             text = paste0("<b>", expense, "</b><br><i>", format(month, "%B %Y"), 
+                           "</i><br>Cost: ", dollar(cost)))) +
+  geom_line() +
+  scale_x_date(date_labels = "%b %Y") +
+  scale_color_manual(values = c("Credit Cards" = palette4[1], 
+                                "Groceries" = palette4[2],
+                                "Rent" = palette4[3],
+                                "Utilities" = palette4[4],
+                                "Total" = "black")) +
+  labs(title = "Overall Expenses by Month",
+       x = NULL, 
+       y = "Cost ($)",
+       col = NULL)
+ggplotly(total_cost_plot, tooltip = "text") %>% 
+  layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
+                       orientation = "h"))
+```
+
+Not surprisingly, changes in credit card spending is the biggest driver of the overall monthly expenses.
