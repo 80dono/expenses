@@ -573,7 +573,7 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ```
 
 # Overall Monthly Expenses
-Putting it all together, we will now plot all our major sources of expense together.
+Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries).
 
 ```{r overall-monthly-costs, out.width="100%"}
 total_cc <- filter(cc_total_cost, card == "Total") %>% 
@@ -584,7 +584,7 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, groceries = cost) %>% 
-  mutate(rent = 2685, total = cc + utils + groceries + rent)
+  mutate(rent = 2685, total = cc + utils + rent) # Don't include groceries since they are already part of cc
 
 total_cost_plot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
