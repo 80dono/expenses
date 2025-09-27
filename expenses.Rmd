@@ -199,8 +199,7 @@ grocery_month_trips <- grocery_month_summary %>%
   theme(legend.position = "bottom") +
   labs(title = "Grocery Trips by Month",
        x = "Month", 
-       y = "Number of Trips",
-       col = "Expenditure ($)")
+       y = "Number of Trips")
 p1_month <- ggplotly(grocery_month_trips, tooltip = "text")
 
 grocery_month_cost <- grocery_month_summary %>% 
@@ -570,7 +569,7 @@ if (nrow(proj_data) > 0) {
          y = "Cost ($)",
          col = NULL)
 } else {
-  utilities_qtr_cost_plot <- utilities_qtr %>% 
+  utilities_qtr_cost_plot <- utilities_qtr_cost %>% 
     ggplot(aes(x = quarter, y = cost, col = utility)) +
     geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
                                 "</i><br>Cost: ", dollar(cost)), 
