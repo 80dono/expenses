@@ -152,7 +152,7 @@ grocery_week_trips_cost <- grocery_week_summary %>%
        subtitle = paste0("R-squared = ", round(r2_week, 2)),
        x = "Trips per Week",
        y = "Weekly Expenditure ($)")
-ggplotly(grocery_week_trips_cost, tooltip = "text")
+ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
 ### Grocery Expenses by Month
@@ -240,7 +240,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
        subtitle = paste0("R-squared = ", round(r2_month, 2)),
        x = "Trips",
        y = "Monthly Total ($)")
-ggplotly(grocery_month_trips_cost, tooltip = "text")
+ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
 
@@ -528,45 +528,65 @@ proj_data <- utilities_qtr %>%
   mutate(proj_cost = if_else(utility == "Water",
                              round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2),
                              round(cost * (3 / num_bills), 2)))
-total_row <- data.frame(utility = "Total",
-                        quarter = proj_data$quarter[1],
-                        cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1], 
-                                      utility == "Total")$cost) %>% 
-  mutate(proj_cost = cost + round(sum(proj_data$proj_cost) - sum(proj_data$cost), 2))
-prev_data <- filter(utilities_qtr_cost, quarter == proj_data$quarter[1] - 1) %>%
-  mutate(proj_cost = cost)
-utilities_qtr_proj <- bind_rows(proj_data, total_row, prev_data)
 
-utilities_qtr_cost_plot <- utilities_qtr_cost %>% 
-  # Show real data where we have it, even if the other utilities are incomplete for the quarter
-  anti_join(filter(utilities_qtr_proj, quarter == max(quarter)), 
-            by = join_by(quarter, utility)) %>% 
-  ggplot(aes(x = quarter, y = cost, col = utility)) +
-  # Plot the actual data first so legend displays solid lines
-  geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
-                              "</i><br>Cost: ", dollar(cost)), 
-                group = utility)) +
-  # Plot projections
-  geom_line(data = utilities_qtr_proj, 
-            aes(x = quarter, y = proj_cost, col = utility, group = utility, 
-                text = paste0("<b>", utility, " (Projected)</b><br><i>", quarter,
-                               "<br>Projected Cost: ", dollar(proj_cost))), 
-            linetype = 2, show.legend = FALSE) +
-  # Re-add most recent (complete) quarter to supersede projection hover text
-  geom_line(data = filter(utilities_qtr_cost, quarter == min(utilities_qtr_proj$quarter)),
-            aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
-                              "</i><br>Cost: ", dollar(cost)), 
-                group = utility)) +
-  scale_x_yearquarter(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Electricity" = palette4[2], 
-                                "Water" = palette4[3],
-                                "Phone" = palette4[1],
-                                "Internet" = palette4[4],
-                                "Total" = "black")) +
-  labs(title = "Utility Costs by Quarter",
-       x = NULL, 
-       y = "Cost ($)",
-       col = NULL)
+if (nrow(proj_data) > 0) {
+  total_row <- data.frame(utility = "Total",
+                          quarter = proj_data$quarter[1],
+                          cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1], 
+                                        utility == "Total")$cost) %>% 
+    mutate(proj_cost = cost + round(sum(proj_data$proj_cost) - sum(proj_data$cost), 2))
+  prev_data <- filter(utilities_qtr_cost, quarter == proj_data$quarter[1] - 1) %>%
+    mutate(proj_cost = cost)
+  utilities_qtr_proj <- bind_rows(proj_data, total_row, prev_data)
+  
+  utilities_qtr_cost_plot <- utilities_qtr_cost %>% 
+    # Show real data where we have it, even if the other utilities are incomplete for the quarter
+    anti_join(filter(utilities_qtr_proj, quarter == max(quarter)), 
+              by = join_by(quarter, utility)) %>% 
+    ggplot(aes(x = quarter, y = cost, col = utility)) +
+    # Plot the actual data first so legend displays solid lines
+    geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
+                                "</i><br>Cost: ", dollar(cost)), 
+                  group = utility)) +
+    # Plot projections
+    geom_line(data = utilities_qtr_proj, 
+              aes(x = quarter, y = proj_cost, col = utility, group = utility, 
+                  text = paste0("<b>", utility, " (Projected)</b><br><i>", quarter,
+                                 "<br>Projected Cost: ", dollar(proj_cost))), 
+              linetype = 2, show.legend = FALSE) +
+    # Re-add most recent (complete) quarter to supersede projection hover text
+    geom_line(data = filter(utilities_qtr_cost, quarter == min(utilities_qtr_proj$quarter)),
+              aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
+                                "</i><br>Cost: ", dollar(cost)), 
+                  group = utility)) +
+    scale_x_yearquarter(date_labels = "%b %Y") +
+    scale_color_manual(values = c("Electricity" = palette4[2], 
+                                  "Water" = palette4[3],
+                                  "Phone" = palette4[1],
+                                  "Internet" = palette4[4],
+                                  "Total" = "black")) +
+    labs(title = "Utility Costs by Quarter",
+         x = NULL, 
+         y = "Cost ($)",
+         col = NULL)
+} else {
+  utilities_qtr_cost_plot <- utilities_qtr %>% 
+    ggplot(aes(x = quarter, y = cost, col = utility)) +
+    geom_line(aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
+                                "</i><br>Cost: ", dollar(cost)), 
+                  group = utility)) +
+    scale_x_yearquarter(date_labels = "%b %Y") +
+    scale_color_manual(values = c("Electricity" = palette4[2], 
+                                  "Water" = palette4[3],
+                                  "Phone" = palette4[1],
+                                  "Internet" = palette4[4],
+                                  "Total" = "black")) +
+    labs(title = "Utility Costs by Quarter",
+         x = NULL, 
+         y = "Cost ($)",
+         col = NULL)
+}
+
 ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>% 
   layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
                        orientation = "h"))
