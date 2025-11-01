@@ -155,7 +155,7 @@ grocery_week_trips_cost <- grocery_week_summary %>%
 ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the polynomial fit in the plot above is `r round(r2_week, 1)`.
+The R-squared value for the polynomial fit in the plot above is `r round(r2_week, 2)`.
 
 ### Grocery Expenses by Month
 We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past 365 days, but all other plots include data going back to January 2025.
@@ -244,7 +244,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
 ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the polynomial fit in the plot above is `r round(r2_month, 1)`.
+The R-squared value for the polynomial fit in the plot above is `r round(r2_month, 2)`.
 
 ## Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
