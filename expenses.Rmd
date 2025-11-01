@@ -43,7 +43,7 @@ palette4 <- hue_pal()(4)
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
 
 # Groceries
-Note: Grocery data does not include Costco, as groceries are only a small portion of our expenses from that store.
+Note: Costco records only include expenses for groceries, so as not to skew the object of the analysis. This requires counting grocery items and manually calculating tax (most groceries are taxed at 1%, but some, including alcohol, are taxed at 6%), so accuracy is unlikely to be 100%. Additionally, it can be difficult to tell if some items are grocery expenses or not from their abbreviated name on the receipt. Nevertheless, this effort is sufficient to capture most of the additional expenses associated with infrequent bulk purchases from the store.
 
 ```{r grocery-data, include=FALSE}
 grocery_sheet <- get_grocery_data(authenticated)
@@ -69,9 +69,9 @@ grocery_last365 <- filter(grocery, date >= today() - days(365))
 
 ## Grocery Expenses over Time
 ### Grocery Expenses by Week
-From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week. All grocery data going forward will only use the last 365 days as reference.
+From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
-Below is the total expenditure per week, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
+Below is the total expenditure per week for the last 365 days, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
 
 ```{r grocery-week}
 mean_weekly_cost <- mean(summarize(group_by(grocery_last365, week), 
@@ -94,10 +94,10 @@ grocery_last365 %>%
   theme(axis.line = element_blank())
 ```
 
-Below are plots of the number of trips per week and expenditure per week over time, to see if there is any directional or seasonal change. Only includes full weeks (does not include the current week, unlike the plot above).
+Below are plots of the number of trips per week and expenditure per week over time (since we began tracking in January 2025), to see if there is any directional or seasonal change. Only includes full weeks (does not include the current week, unlike the plot above).
 
 ```{r grocery-week-trips-cost, out.width="100%", warning=FALSE}
-grocery_week_summary <- grocery_last365 %>%
+grocery_week_summary <- grocery %>%
   filter(date < floor_date(today(), unit = "week", week_start = 1)) %>% 
   group_by(year, week) %>%
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
@@ -155,8 +155,10 @@ grocery_week_trips_cost <- grocery_week_summary %>%
 ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
+The R-squared value for the polynomial fit in the plot above is `r round(r2_week, 1)`.
+
 ### Grocery Expenses by Month
-We will now repeat each plot, this time aggregating over a month instead of week.
+We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past 365 days, but all other plots include data going back to January 2025.
 
 ```{r grocery-month}
 mean_monthly_cost <- mean(summarize(group_by(grocery_last365, month), 
@@ -182,7 +184,7 @@ grocery_last365 %>%
 
 For the following plots, we will only show data for completed months; the current month is not included. 
 ```{r grocery-month-trips-cost, out.width="100%", warning=FALSE}
-grocery_month_summary <- grocery_last365 %>% 
+grocery_month_summary <- grocery %>% 
   filter(date < floor_date(today(), unit = "months")) %>% 
   group_by(year, month) %>% 
   summarize(trips = n(), cost = sum(cost), .groups = "drop")
@@ -234,7 +236,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
                   group = 1),
               width = 0.5, height = 0) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
-  scale_x_continuous(breaks = seq(2, max(count(grocery_last365, month)$n), 2)) +
+  scale_x_continuous(breaks = seq(2, max(count(grocery, month)$n), 2)) +
   labs(title = "Monthly Cost by Number of Trips",
        subtitle = paste0("R-squared = ", round(r2_month, 2)),
        x = "Trips",
@@ -242,6 +244,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
 ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
+The R-squared value for the polynomial fit in the plot above is `r round(r2_month, 1)`.
 
 ## Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
@@ -288,7 +291,7 @@ We will now plot the ratio of number of items and cost. Only stores that have be
 
 ```{r item-cost-scatterplot}
 grocery %>% 
-  filter(store_label != "Other") %>% # Only include stores that have been visited 3+ times
+  filter(store_label != "Other") %>% # Only include stores that have been visited 5+ times
   ggplot(aes(x = items, y = cost, col = store)) +
   geom_jitter(size = 2, width = 0.5, height = 0) +
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
@@ -423,6 +426,8 @@ cc <- cc_sheet %>%
 ## Credit Card Expenses by Month
 Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days. The Discover card is paid off on the first of every month, however we will subtract one day from the payment dates so that they align with the month of expenses that they represent.
 
+*[September 2025 has two entries for the USAA card because we switched from manually paying the bill (around the fifth of the month) to auto-paying on the first of the month. Consequently, we will use the same strategy as the Discover card, where one day is subtracted so that it accurately reflects the statement as a summary of that month.]*
+
 ```{r monthly-credit-cards}
 cc_total_cost <- cc %>% 
   group_by(year, month) %>% 
@@ -469,6 +474,7 @@ utilities <- utilities_sheet %>%
 Points have been added to the line plot below to highlight the fact that water is billed on a quarterly basis, as opposed to the other utilities. Consequently, its line does not have a point at each month. This explains some of the spiking in the total that may otherwise appear confusing, as every three months essentially has an extra bill.
 ```{r monthly-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
+  # Try dividing the quarterly water bill over the three months it covers (smooths the Total line)
   group_by(year, month) %>% 
   summarize(cost = sum(cost), utility = "Total",
             .groups = "drop") %>% 
@@ -593,6 +599,8 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 
 # Overall Monthly Expenses
 Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries).
+
+**ADD INSURANCE EXPENSES**
 
 ```{r overall-monthly-costs, out.width="100%"}
 total_cc <- filter(cc_total_cost, card == "Total") %>% 
