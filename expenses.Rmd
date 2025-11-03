@@ -29,7 +29,9 @@ tryCatch(
   error = function(err) {
     message("User is not authenticated.")
   })
+
 source("tools/get_data.R")
+source("tools/generate_dynamic_plots.R")
 
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5),
@@ -290,6 +292,7 @@ Note that for Trader Joe's and Wegmans, the number of items is counted manually,
 We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r item-cost-scatterplot}
+# Make Plotly
 grocery %>% 
   filter(store_label != "Other") %>% # Only include stores that have been visited 5+ times
   ggplot(aes(x = items, y = cost, col = store)) +
@@ -334,6 +337,7 @@ grocery %>%
 One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025. The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r shopper-analysis}
+# Make Plotly
 grocery %>% 
   drop_na() %>% 
   # Add number of trips per shopper
@@ -484,6 +488,8 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
                                                           "Total"), 
                                                   "Total"))
 
+# Is there a way to make it so that when you remove water from the Plotly, the total line changes?
+
 utilities_cost_plot <- utilities_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility)) +
   geom_line() +
@@ -612,28 +618,44 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, groceries = cost) %>% 
   mutate(rent = 2685, total = cc + utils + rent) # Don't include groceries since they are already part of cc
+# Total will be recalculated in the JavaScript section
 
-total_cost_plot <- total_costs %>% 
-  pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
-  mutate(expense = factor(expense, levels = c("cc", "groceries", "rent", "utils", "total"),
-                          labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total"))) %>% 
-  ggplot(aes(x = month, y = cost, col = expense, group = expense,
-             text = paste0("<b>", expense, "</b><br><i>", format(month, "%B %Y"), 
-                           "</i><br>Cost: ", dollar(cost)))) +
-  geom_line() +
-  scale_x_date(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Credit Cards" = palette4[1], 
-                                "Groceries" = palette4[2],
-                                "Rent" = palette4[3],
-                                "Utilities" = palette4[4],
-                                "Total" = "black")) +
-  labs(title = "Overall Expenses by Month",
-       x = NULL, 
-       y = "Cost ($)",
-       col = NULL)
-ggplotly(total_cost_plot, tooltip = "text") %>% 
-  layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
-                       orientation = "h"))
+total_cost_plot <- dynamic_total_plot(total_costs, 
+                                      trace_order = c("cc", "groceries", "rent", "utils"), 
+                                      trace_labels = c("Credit Cards", "Groceries", "Rent", "Utilities"),
+                                      colors = palette4[1:4],
+                                      time_unit = "month")
+
+# Update final layout
+total_cost_plot <- layout(total_cost_plot,
+  title = "Overall Expenses by Month",
+  xaxis = list(title = NULL, tickformat = "%b %Y"),
+  yaxis = list(title = "Cost ($)"),
+  legend = list(x = 0.5, xanchor = "center", y = -0.1, orientation = "h")
+)
+total_cost_plot
+
+# total_cost_plot <- total_costs %>% 
+#   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
+#   mutate(expense = factor(expense, levels = c("cc", "groceries", "rent", "utils", "total"),
+#                           labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total"))) %>% 
+#   ggplot(aes(x = month, y = cost, col = expense, group = expense,
+#              text = paste0("<b>", expense, "</b><br><i>", format(month, "%B %Y"), 
+#                            "</i><br>Cost: ", dollar(cost)))) +
+#   geom_line() +
+#   scale_x_date(date_labels = "%b %Y") +
+#   scale_color_manual(values = c("Credit Cards" = palette4[1], 
+#                                 "Groceries" = palette4[2],
+#                                 "Rent" = palette4[3],
+#                                 "Utilities" = palette4[4],
+#                                 "Total" = "black")) +
+#   labs(title = "Overall Expenses by Month",
+#        x = NULL, 
+#        y = "Cost ($)",
+#        col = NULL)
+# ggplotly(total_cost_plot, tooltip = "text") %>% 
+#   layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
+#                        orientation = "h"))
 ```
 
 Not surprisingly, changes in credit card spending is the biggest driver of the overall monthly expenses.
