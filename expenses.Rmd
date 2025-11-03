@@ -31,7 +31,6 @@ tryCatch(
   })
 
 source("tools/get_data.R")
-source("tools/generate_dynamic_plots.R")
 
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5),
@@ -475,10 +474,9 @@ utilities <- utilities_sheet %>%
 ```
 
 ## Utility Expenses by Month
-Points have been added to the line plot below to highlight the fact that water is billed on a quarterly basis, as opposed to the other utilities. Consequently, its line does not have a point at each month. This explains some of the spiking in the total that may otherwise appear confusing, as every three months essentially has an extra bill.
+The water bill, which is quarterly as opposed to monthly, has been divided evenly among the three months it represents. This provides a better picture of the periodic fluctuations in utility costs throughout the year.
 ```{r monthly-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
-  # Try dividing the quarterly water bill over the three months it covers (smooths the Total line)
   group_by(year, month) %>% 
   summarize(cost = sum(cost), utility = "Total",
             .groups = "drop") %>% 
@@ -491,12 +489,22 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
 # Is there a way to make it so that when you remove water from the Plotly, the total line changes?
 
 utilities_cost_plot <- utilities_total_cost %>% 
-  ggplot(aes(x = month, y = cost, col = utility)) +
+  mutate(is_water = utility == "Water") %>%
+  rowwise() %>% 
+  mutate(expanded = if_else(is_water,
+                            # Convert water from quarterly to monthly using average cost
+                            list(tibble(utility = "Water",
+                                        month = seq(month, by = "1 month", length.out = 3),
+                                        cost = cost / 3)),
+                            list(tibble(utility = utility, month = month, cost = cost)))) %>%
+  # Deconstruct back to a data frame
+  ungroup() %>% 
+  select(expanded) %>% 
+  unnest(expanded) %>% 
+  ggplot(aes(x = month, y = cost, col = utility, group = utility,
+             text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
+                           "</i><br>Cost: ", dollar(cost)))) +
   geom_line() +
-  geom_point(aes(text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
-                               "</i><br>Cost: ", dollar(cost)), 
-                 group = utility), 
-             size = 1) +
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = palette4[2], 
                                 "Water" = palette4[3],
@@ -514,7 +522,7 @@ ggplotly(utilities_cost_plot, tooltip = "text") %>%
 
 
 ## Utility Expenses by Quarter
-Since water is billed on a quarterly, rather than monthly basis, we will aggregate the other utilities to match this scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the overall trend for all utilities with this standard basis of comparison.
+Alternatively, instead of artificially converting water to a monthly expense, we can aggregate the other utilities to match the quarterly scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the true overall trend for all utilities with this standard basis of comparison.
 
 Where data is incomplete, we have scaled the available bills to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total. Solid lines denote a full quarter, while dashed lines are a projection based on the months that have already received bills for that utility. Some utilities may be complete before the end of the quarter, while others may not.
 
