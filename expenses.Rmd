@@ -290,24 +290,27 @@ Note that for Trader Joe's and Wegmans, the number of items is counted manually,
 
 We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
-```{r item-cost-scatterplot}
-# Make Plotly
-grocery %>% 
+```{r item-cost-scatterplot, warning=FALSE}
+grocery_item_cost <- grocery %>% 
   filter(store_label != "Other") %>% # Only include stores that have been visited 5+ times
   ggplot(aes(x = items, y = cost, col = store)) +
-  geom_jitter(size = 2, width = 0.5, height = 0) +
+  geom_jitter(aes(group = 1,
+                  text = paste0("<b>", store, "</b><br><i>", date,
+                                "</i><br>Items: ", items, "<br>Expenditure: ", dollar(cost))),
+              width = 0.5, height = 0) +
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
               linetype = "dashed", linewidth = 1) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
   labs(title = "Grocery Stores by Average Item Cost",
-       subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
-                         format(max(grocery$date), "%m/%d/%Y")),
-       caption = "Note: the dashed line is the overall average cost per item",
+       # subtitle = paste0(format(min(grocery$date), "%m/%d/%Y"), " - ", 
+       #                   format(max(grocery$date), "%m/%d/%Y")),
+       # caption = "Note: the dashed line is the overall average cost per item",
        x = "Number of Items Purchased",
        y = "Expenditure ($)",
        col = NULL) +
   theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
         plot.caption = element_text(hjust = 0))
+ggplotly(grocery_item_cost, tooltip = "text")
 ```
 
 The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
@@ -335,16 +338,18 @@ grocery %>%
 ## Grocery Expenses by Shopper
 One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025. The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
-```{r shopper-analysis}
-# Make Plotly
-grocery %>% 
+```{r shopper-analysis, warning=FALSE}
+shoppers_plot <- grocery %>% 
   drop_na() %>% 
   # Add number of trips per shopper
   group_by(shopper) %>% 
   mutate(shopper_label = paste0(shopper, " (", n(), " trips)")) %>% 
   ungroup() %>% 
   ggplot(aes(x = items, y = cost, col = shopper_label)) +
-  geom_jitter(width = 0.5, height = 0) +
+  geom_jitter(aes(group = 1, 
+                  text = paste0("<b>", shopper, "</b><br><i>", date, "</i><br>Store: ", store, 
+                                "<br>Items: ", items, "<br>Expenditure: ", dollar(cost))),
+              width = 0.5, height = 0) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
   geom_smooth(data = grocery, mapping = aes(x = items, y = cost), 
               col = "black", linetype = "dashed",
@@ -355,6 +360,7 @@ grocery %>%
        col = NULL) +
   theme(legend.position = "inside", legend.position.inside = c(0.1, 0.9), 
         plot.caption = element_text(hjust = 0))
+ggplotly(shoppers_plot, tooltip = "text")
 ```
 
 ```{r shopper-distributions, out.width="50%", fig.align="default"}
@@ -474,7 +480,7 @@ utilities <- utilities_sheet %>%
 ```
 
 ## Utility Expenses by Month
-The water bill, which is quarterly as opposed to monthly, has been divided evenly among the three months it represents. This provides a better picture of the periodic fluctuations in utility costs throughout the year.
+The water bill, which is quarterly as opposed to monthly, has been divided evenly among the three months it represents. This provides a better picture of the periodic fluctuations in utility costs throughout the year. Note, however, that this renders the Total incomplete for all months since the last water data point.
 ```{r monthly-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
   group_by(year, month) %>% 
