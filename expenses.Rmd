@@ -494,13 +494,19 @@ utilities_cost_plot <- utilities_total_cost %>%
   mutate(expanded = if_else(is_water,
                             # Convert water from quarterly to monthly using average cost
                             list(tibble(utility = "Water",
-                                        month = seq(month, by = "1 month", length.out = 3),
+                                        month = seq(month %m-% months(2), by = "1 month", length.out = 3),
                                         cost = cost / 3)),
                             list(tibble(utility = utility, month = month, cost = cost)))) %>%
   # Deconstruct back to a data frame
   ungroup() %>% 
   select(expanded) %>% 
-  unnest(expanded) %>% 
+  unnest(expanded) %>%
+  # Reset utility order so Total is at the end
+  mutate(utility = factor(utility, 
+                          levels = c(setdiff(levels(as.factor(utility)),
+                                             "Total"), 
+                                     "Total"))) %>% 
+  # Plot results
   ggplot(aes(x = month, y = cost, col = utility, group = utility,
              text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Cost: ", dollar(cost)))) +
@@ -542,11 +548,16 @@ utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility,
 
 # Construct projections data frame
 proj_data <- utilities_qtr %>%
-  filter(((utility != "Water" & num_bills < 3) | (utility == "Water" & num_bills < 1)),
-         quarter > yearquarter(today()) - 1) %>%
-  mutate(proj_cost = if_else(utility == "Water",
-                             round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2),
-                             round(cost * (3 / num_bills), 2)))
+  filter((utility != "Water" & num_bills < 3 & quarter > yearquarter(today()) - 1)) %>%
+  mutate(proj_cost = round(cost * (3 / num_bills), 2)) # if_else(utility == "Water",
+                             # round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2),
+                             # round(cost * (3 / num_bills), 2)))
+if (max(filter(proj_data, utility == "Water")$quarter) < yearquarter(today())) {
+  proj_data <- bind_rows(proj_data, 
+                         data.frame(utility = "Water", quarter = yearquarter(today()), 
+                                    cost = 0,
+                                    proj_cost = round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2)))
+}
 
 if (nrow(proj_data) > 0) {
   total_row <- data.frame(utility = "Total",
