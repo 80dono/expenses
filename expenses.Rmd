@@ -173,14 +173,15 @@ grocery_last365 %>%
              linetype = "dashed", linewidth = 1.5) +
   annotate("label", x = min(grocery_last365$month) - days(14), y = mean_monthly_cost, 
            label = round(mean_monthly_cost, 2)) +
-  scale_x_date(breaks = "1 month", date_labels = "%b %Y") +
+  scale_x_date(breaks = "1 month", date_labels = "%b\n%Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = NULL,
        y = "Expenditure ($)",
        fill = NULL) +
   theme(axis.line = element_blank(),
-        axis.ticks.x = element_blank())
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_text(margin = margin(t = -10)))
 ```
 
 For the following plots, we will only show data for completed months; the current month is not included. 
@@ -290,7 +291,7 @@ Note that for Trader Joe's and Wegmans, the number of items is counted manually,
 
 We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
-```{r item-cost-scatterplot, warning=FALSE}
+```{r item-cost-scatterplot, warning=FALSE, out.width="100%"}
 grocery_item_cost <- grocery %>% 
   filter(store_label != "Other") %>% # Only include stores that have been visited 5+ times
   ggplot(aes(x = items, y = cost, col = store)) +
@@ -434,8 +435,6 @@ cc <- cc_sheet %>%
 
 ## Credit Card Expenses by Month
 Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days. The Discover card is paid off on the first of every month, however we will subtract one day from the payment dates so that they align with the month of expenses that they represent.
-
-*[September 2025 has two entries for the USAA card because we switched from manually paying the bill (around the fifth of the month) to auto-paying on the first of the month. Consequently, we will use the same strategy as the Discover card, where one day is subtracted so that it accurately reflects the statement as a summary of that month.]*
 
 ```{r monthly-credit-cards}
 cc_total_cost <- cc %>% 
