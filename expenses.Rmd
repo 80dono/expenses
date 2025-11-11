@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
 library(googlesheets4)
+library(httr)
+library(jsonlite)
 library(scales)
 library(plotly)
 library(DT)
@@ -65,6 +67,25 @@ grocery$store_label <- factor(grocery$store_label,
 
 grocery_last365 <- filter(grocery, date >= today() - days(365))
 ```
+
+```{r grocery-cpi-data, include=FALSE}
+# Get CPI data from the Bureau of Labor Statistics public API
+
+# Series: Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted
+series_id <- "CUUR0120SAF11"
+
+response <- POST(paste0("https://api.bls.gov/publicAPI/v1/timeseries/data/", series_id),
+                 add_headers("Content-Type" = "application/json"))
+content <- content(response, as = "parsed", type = "application/json")
+cpi_groceries <- content$Results$series[[1]]$data %>% 
+  map_dfr(as_tibble) %>% 
+  filter(periodName %in% month.name, year >= 2025) %>% # Remove annual aggregates and unnecessary years
+  mutate(year_month = yearmonth(paste(year, periodName)),
+         cpi = as.numeric(value)) %>% 
+  select(year_month, cpi) %>% 
+  tsibble(index = year_month)
+```
+
 
 ### Grocery Expenses over Time
 #### Grocery Expenses by Week
@@ -210,6 +231,9 @@ grocery_month_cost <- grocery_month_summary %>%
                               dollar(cost), "<br>Trips: ", trips),
                 group = 1),,
             col = "blue") +
+  geom_line(data = cpi_groceries, aes(x = as.Date(year_month), 
+                                      y = (cpi / 100) * mean(grocery_month_summary$cost)), 
+                                      col = "orange") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
@@ -222,6 +246,8 @@ p2_month <- ggplotly(grocery_month_cost, tooltip = "text") %>%
 
 subplot(p1_month, p2_month, margin = 0.05, titleY = TRUE)
 ```
+
+The orange line is the Consumer Price Index (CPI) times the mean monthly grocery expenditure (to put it on a similar scale). The specific CPI series used is "Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted", obtained from the Bureau of Labor Statistics' public API.
 
 For the plot below, points have been jittered ($\pm$ 0.5 trips) to reduce overlap; trips can only be a whole number.
 
@@ -249,7 +275,7 @@ The R-squared value for the polynomial fit in the plot above is `r round(r2_mont
 ### Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
 
-```{r grocery-stores-week, out.width="50%", fig.align="default"}
+```{r grocery-stores, out.width="50%", fig.align="default"}
 grocery %>% 
   group_by(store) %>% 
   summarize(trips = n(), 
@@ -691,5 +717,9 @@ There are various sources of income, ranging from paychecks to gifts to reimburs
 income_sheet <- get_income_data(authenticated)
 income <- format_date(income_sheet) %>% 
   mutate(source = as.factor(source))
+```
+
+```{r}
+# Plot income data (group by month?)
 ```
 
