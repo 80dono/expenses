@@ -1,5 +1,5 @@
 ---
-title: "<center>Expenses</center>"
+title: "<center>Finances</center>"
 subtitle: "Table of Contents"
 output: 
   html_document:
@@ -43,7 +43,8 @@ palette4 <- hue_pal()(4)
 
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
 
-# Groceries
+# Expenses
+## Groceries
 Note: Costco records only include expenses for groceries, so as not to skew the object of the analysis. This requires counting grocery items and manually calculating tax (most groceries are taxed at 1%, but some, including alcohol, are taxed at 6%), so accuracy is unlikely to be 100%. Additionally, it can be difficult to tell if some items are grocery expenses or not from their abbreviated name on the receipt. Nevertheless, this effort is sufficient to capture most of the additional expenses associated with infrequent bulk purchases from the store.
 
 ```{r grocery-data, include=FALSE}
@@ -68,8 +69,8 @@ grocery$store_label <- factor(grocery$store_label,
 grocery_last365 <- filter(grocery, date >= today() - days(365))
 ```
 
-## Grocery Expenses over Time
-### Grocery Expenses by Week
+### Grocery Expenses over Time
+#### Grocery Expenses by Week
 From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
 Below is the total expenditure per week for the last 365 days, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
@@ -158,7 +159,7 @@ ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared s
 
 The R-squared value for the polynomial fit in the plot above is `r round(r2_week, 2)`.
 
-### Grocery Expenses by Month
+#### Grocery Expenses by Month
 We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past 365 days, but all other plots include data going back to January 2025.
 
 ```{r grocery-month}
@@ -248,7 +249,7 @@ ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared 
 
 The R-squared value for the polynomial fit in the plot above is `r round(r2_month, 2)`.
 
-## Grocery Expenses by Store
+### Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
 
 ```{r grocery-stores-week, out.width="50%", fig.align="default"}
@@ -316,7 +317,7 @@ ggplotly(grocery_item_cost, tooltip = "text")
 
 The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
 
-## Grocery Expenses by Day of Week
+### Grocery Expenses by Day of Week
 Do we spend more on groceries on certain days of the week? Which days do we most often find ourselves making a trip to the store?
 
 ```{r groceries-weekday, out.width="50%", fig.align="default"}
@@ -336,7 +337,7 @@ grocery %>%
 ```
 
 
-## Grocery Expenses by Shopper
+### Grocery Expenses by Shopper
 One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025. The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r shopper-analysis, warning=FALSE}
@@ -422,7 +423,7 @@ plot_grid(grocery %>%
 ```
 
 
-# Credit Cards
+## Credit Cards
 To better examine overall spending, we will look at the monthly statements for each of our credit cards, as these are the primary means we use for purchasing things.
 ```{r credit-card-data, include=FALSE}
 cc_sheet <- get_credit_card_data(authenticated)
@@ -433,7 +434,7 @@ cc <- cc_sheet %>%
          month = floor_date(date, unit = "month"))
 ```
 
-## Credit Card Expenses by Month
+### Credit Card Expenses by Month
 Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days. The Discover card is paid off on the first of every month, however we will subtract one day from the payment dates so that they align with the month of expenses that they represent.
 
 ```{r monthly-credit-cards}
@@ -467,7 +468,7 @@ ggplotly(cc_cost_plot, tooltip = "text") %>%
                        orientation = "h"))
 ```
 
-# Utilities
+## Utilities
 We will now examine the costs associated with utilities -- specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (to avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary. All utilities except electricity are billed at the beginning of the following month; electricity is billed at the end of the month (billing periods do not fully overlap with calendar months).
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
@@ -478,7 +479,7 @@ utilities <- utilities_sheet %>%
          month = floor_date(date, unit = "month"))
 ```
 
-## Utility Expenses by Month
+### Utility Expenses by Month
 The water bill, which is quarterly as opposed to monthly, has been divided evenly among the three months it represents. This provides a better picture of the periodic fluctuations in utility costs throughout the year. Note, however, that this renders the Total incomplete for all months since the last water data point.
 ```{r total-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
@@ -556,7 +557,7 @@ ggplotly(utilities_monthly_cost_plot, tooltip = "text") %>%
 ```
 
 
-## Utility Expenses by Quarter
+### Utility Expenses by Quarter
 Alternatively, instead of artificially converting water to a monthly expense, we can aggregate the other utilities to match the quarterly scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the true overall trend for all utilities with this standard basis of comparison.
 
 Where data is incomplete, we have scaled the available bills to a full quarter for each utility (except water, which uses the average of the previous water bills) and taken the sum of those scaled projections to get the quarterly total. Solid lines denote a full quarter, while dashed lines are a projection based on the months that have already received bills for that utility. Some utilities may be complete before the end of the quarter, while others may not.
@@ -578,9 +579,7 @@ utilities_qtr_cost$utility <- factor(utilities_qtr_cost$utility,
 # Construct projections data frame
 proj_data <- utilities_qtr %>%
   filter((utility != "Water" & num_bills < 3 & quarter > yearquarter(today()) - 1)) %>%
-  mutate(proj_cost = round(cost * (3 / num_bills), 2)) # if_else(utility == "Water",
-                             # round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2),
-                             # round(cost * (3 / num_bills), 2)))
+  mutate(proj_cost = round(cost * (3 / num_bills), 2))
 if (max(filter(proj_data, utility == "Water")$quarter) < yearquarter(today())) {
   proj_data <- bind_rows(proj_data, 
                          data.frame(utility = "Water", quarter = yearquarter(today()), 
@@ -651,7 +650,7 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
                        orientation = "h"))
 ```
 
-# Overall Monthly Expenses
+## Overall Monthly Expenses
 Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries).
 
 **ADD INSURANCE EXPENSES**
@@ -691,3 +690,11 @@ ggplotly(total_cost_plot, tooltip = "text") %>%
 ```
 
 Not surprisingly, changes in credit card spending is the biggest driver of the overall monthly expenses.
+
+
+# Income
+There are various sources of income, ranging from paychecks to gifts to reimbursements (e.g. work travel, taxes). Complete data ranges back to approximately May 2025.
+```{r income-data, include=FALSE}
+income <- get_income_data(authenticated)
+```
+

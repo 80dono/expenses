@@ -75,3 +75,25 @@ get_utility_data <- function(authenticated = FALSE) {
     return(sample_data)
   }
 }
+
+#' Retrieve income data, either from Google Sheet or by simulation
+#' 
+#' If the user is authenticated, the function will retrieve the data stored in the Google Sheet. If not, sample data will be generated using `generate_sample_income_data()` (in *tools/generate_sample_data.R*).
+#' 
+#' @param authenticated A boolean indicator for whether the user has successfully been authenticated.
+#' @return A data frame containing the date, income amount, and income source for each instance, along with a boolean indicator for whether the data is real.
+get_income_data <- function(authenticated = FALSE) {
+  if (authenticated) {
+    # Read from Google sheet if possible
+    data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
+                       range = "Income") %>% 
+      mutate(real = TRUE)
+    return(data)
+  }
+  else {
+    # Use sample data if unable to read sheet
+    message("Unable to access data; generating sample data instead.")
+    sample_data <- generate_sample_income_data()
+    return(sample_data)
+  }
+}
