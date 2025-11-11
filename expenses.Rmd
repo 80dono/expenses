@@ -480,7 +480,7 @@ utilities <- utilities_sheet %>%
 
 ## Utility Expenses by Month
 The water bill, which is quarterly as opposed to monthly, has been divided evenly among the three months it represents. This provides a better picture of the periodic fluctuations in utility costs throughout the year. Note, however, that this renders the Total incomplete for all months since the last water data point.
-```{r monthly-utilities, warning=FALSE}
+```{r total-utilities, warning=FALSE}
 utilities_total_cost <- utilities %>% 
   group_by(year, month) %>% 
   summarize(cost = sum(cost), utility = "Total",
@@ -490,10 +490,10 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
                                        levels = c(setdiff(levels(as.factor(utilities_total_cost$utility)),
                                                           "Total"), 
                                                   "Total"))
+```
 
-# Is there a way to make it so that when you remove water from the Plotly, the total line changes?
-
-utilities_cost_plot <- utilities_total_cost %>% 
+```{r monthly-utilities, warning=FALSE}
+utilities_monthly_cost <- utilities_total_cost %>% 
   mutate(is_water = utility == "Water") %>%
   rowwise() %>% 
   mutate(expanded = if_else(is_water,
@@ -510,12 +510,36 @@ utilities_cost_plot <- utilities_total_cost %>%
   mutate(utility = factor(utility, 
                           levels = c(setdiff(levels(as.factor(utility)),
                                              "Total"), 
-                                     "Total"))) %>% 
-  # Plot results
+                                     "Total")))
+
+temp_month <- max(filter(utilities_monthly_cost, utility == "Water")$month) + months(1)
+water_monthly_proj <- filter(utilities_monthly_cost, utility == "Water", month == temp_month - months(1))
+while (month(temp_month) <= month(today())) {
+  water_monthly_proj <- bind_rows(water_monthly_proj, 
+                                  data.frame(utility = "Water", year = year(temp_month), month = temp_month, 
+                                             real = FALSE, 
+                                             cost = round(mean(filter(utilities_monthly_cost, utility == "Water")$cost), 2)))
+  temp_month <- temp_month + months(1)
+}
+
+# Is there a way to make it so that when you remove water from the Plotly, the total line changes?
+
+utilities_monthly_cost_plot <- utilities_monthly_cost %>% 
   ggplot(aes(x = month, y = cost, col = utility, group = utility,
              text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Cost: ", dollar(cost)))) +
   geom_line() +
+  geom_line(data = water_monthly_proj, 
+            aes(x = month, y = cost, col = utility, group = utility,
+                text = paste0(paste0("<b>", utility, "</b><br><i>", 
+                                     format(month, "%B %Y"), 
+                                     "</i><br>Projected Cost: ", dollar(cost)))),
+            linetype = 2, show.legend = FALSE) +
+  # Re-add most recent (complete) month to supersede projection hover text
+  geom_line(data = filter(utilities_monthly_cost, month == min(water_monthly_proj$month)),
+            aes(text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
+                              "</i><br>Cost: ", dollar(cost)), 
+                group = utility)) +
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = palette4[2], 
                                 "Water" = palette4[3],
@@ -526,7 +550,7 @@ utilities_cost_plot <- utilities_total_cost %>%
        x = NULL, 
        y = "Cost ($)",
        col = NULL)
-ggplotly(utilities_cost_plot, tooltip = "text") %>% 
+ggplotly(utilities_monthly_cost_plot, tooltip = "text") %>% 
   layout(legend = list(x = 0.5, xanchor = "center", y = -0.1,
                        orientation = "h"))
 ```
@@ -590,7 +614,7 @@ if (nrow(proj_data) > 0) {
                                  "<br>Projected Cost: ", dollar(proj_cost))), 
               linetype = 2, show.legend = FALSE) +
     # Re-add most recent (complete) quarter to supersede projection hover text
-    geom_line(data = filter(utilities_qtr_cost, quarter == min(utilities_qtr_proj$quarter)),
+    geom_line(data = filter(utilities_qtr_cost, quarter == max(utilities_qtr_proj$quarter)),
               aes(text = paste0("<b>", utility, "</b><br><i>", quarter, 
                                 "</i><br>Cost: ", dollar(cost)), 
                   group = utility)) +
