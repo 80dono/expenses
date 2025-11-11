@@ -40,7 +40,6 @@ theme_update(plot.title = element_text(hjust = 0.5),
              panel.grid.major = element_blank(),
              panel.grid.minor = element_blank(),
              axis.line = element_line(color = "black"))
-palette4 <- hue_pal()(4)
 ```
 
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
@@ -470,16 +469,19 @@ cc_total_cost$card <- factor(cc_total_cost$card,
                                                 "Total"), 
                                         "Total"))
 
+# Set credit card palette
+cc_palette <- hue_pal()(length(levels(cc_total_cost$card)) - 1)
+
 cc_cost_plot <- cc_total_cost %>% 
   ggplot(aes(x = month, y = cost, col = card, group = card,
              text = paste0("<b>", card, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Balance: ", dollar(cost)))) +
   geom_line() +
   scale_x_date(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Discover" = palette4[1], 
-                                "Sapphire" = palette4[2],
-                                "United" = palette4[3],
-                                "USAA" = palette4[4],
+  scale_color_manual(values = c("Discover" = cc_palette[1], 
+                                "Sapphire" = cc_palette[2],
+                                "United" = cc_palette[3],
+                                "USAA" = cc_palette[4],
                                 "Total" = "black")) +
   labs(title = "Credit Card Expenses by Month",
        x = NULL, 
@@ -511,6 +513,9 @@ utilities_total_cost$utility <- factor(utilities_total_cost$utility,
                                        levels = c(setdiff(levels(as.factor(utilities_total_cost$utility)),
                                                           "Total"), 
                                                   "Total"))
+
+# Set utilities palette
+utils_palette <- hue_pal()(length(levels(utilities_total_cost$utility)) - 1)
 ```
 
 ```{r monthly-utilities, warning=FALSE}
@@ -562,10 +567,10 @@ utilities_monthly_cost_plot <- utilities_monthly_cost %>%
                               "</i><br>Cost: ", dollar(cost)), 
                 group = utility)) +
   scale_x_date(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Electricity" = palette4[2], 
-                                "Water" = palette4[3],
-                                "Phone" = palette4[1],
-                                "Internet" = palette4[4],
+  scale_color_manual(values = c("Electricity" = utils_palette[2], 
+                                "Water" = utils_palette[3],
+                                "Phone" = utils_palette[1],
+                                "Internet" = utils_palette[4],
                                 "Total" = "black")) +
   labs(title = "Utility Costs by Month",
        x = NULL, 
@@ -637,10 +642,10 @@ if (nrow(proj_data) > 0) {
                                 "</i><br>Cost: ", dollar(cost)), 
                   group = utility)) +
     scale_x_yearquarter(date_labels = "%b %Y") +
-    scale_color_manual(values = c("Electricity" = palette4[2], 
-                                  "Water" = palette4[3],
-                                  "Phone" = palette4[1],
-                                  "Internet" = palette4[4],
+    scale_color_manual(values = c("Electricity" = utils_palette[2], 
+                                  "Water" = utils_palette[3],
+                                  "Phone" = utils_palette[1],
+                                  "Internet" = utils_palette[4],
                                   "Total" = "black")) +
     labs(title = "Utility Costs by Quarter",
          x = NULL, 
@@ -653,10 +658,10 @@ if (nrow(proj_data) > 0) {
                                 "</i><br>Cost: ", dollar(cost)), 
                   group = utility)) +
     scale_x_yearquarter(date_labels = "%b %Y") +
-    scale_color_manual(values = c("Electricity" = palette4[2], 
-                                  "Water" = palette4[3],
-                                  "Phone" = palette4[1],
-                                  "Internet" = palette4[4],
+    scale_color_manual(values = c("Electricity" = utils_palette[2], 
+                                  "Water" = utils_palette[3],
+                                  "Phone" = utils_palette[1],
+                                  "Internet" = utils_palette[4],
                                   "Total" = "black")) +
     labs(title = "Utility Costs by Quarter",
          x = NULL, 
@@ -684,20 +689,24 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, groceries = cost) %>% 
   mutate(rent = 2685, total = cc + utils + rent) # Don't include groceries since they are already part of cc
-
-total_cost_plot <- total_costs %>% 
+total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
   mutate(expense = factor(expense, levels = c("cc", "groceries", "rent", "utils", "total"),
-                          labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total"))) %>% 
+                          labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total")))
+
+# Set expenses palette
+expenses_palette <- hue_pal()(length(levels(total_costs_pivot$expense)) - 1)
+
+total_cost_plot <-  total_costs_pivot %>% 
   ggplot(aes(x = month, y = cost, col = expense, group = expense,
              text = paste0("<b>", expense, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Cost: ", dollar(cost)))) +
   geom_line() +
   scale_x_date(date_labels = "%b %Y") +
-  scale_color_manual(values = c("Credit Cards" = palette4[1], 
-                                "Groceries" = palette4[2],
-                                "Rent" = palette4[3],
-                                "Utilities" = palette4[4],
+  scale_color_manual(values = c("Credit Cards" = expenses_palette[1], 
+                                "Groceries" = expenses_palette[2],
+                                "Rent" = expenses_palette[3],
+                                "Utilities" = expenses_palette[4],
                                 "Total" = "black")) +
   labs(title = "Overall Expenses by Month",
        x = NULL, 
@@ -719,7 +728,60 @@ income <- format_date(income_sheet) %>%
   mutate(source = as.factor(source))
 ```
 
-```{r}
-# Plot income data (group by month?)
+```{r income-total}
+income_total <- income %>% 
+  group_by(year, month) %>% 
+  summarize(amount = sum(amount), source = "Total", inputs = n(), date = max(date), 
+            year = year(date), month = floor_date(date, unit = "month"),
+            .groups = "drop") %>% 
+  bind_rows(income)
+income_total$source <- factor(income_total$source, 
+                              levels = c(setdiff(levels(as.factor(income_total$source)),
+                                                 c("Other", "Total")), 
+                                         "Other", "Total"))
+
+# Set income palette
+income_palette <- hue_pal()(length(levels(income_total$source)) - 1)
 ```
 
+```{r plot-income-total, eval=FALSE}
+# Total not on monthly scale
+income_plot <- income_total %>% 
+  ggplot(aes(x = date, y = amount, col = source, group = source, 
+             text = paste0("<b>", source, "</b><br><i>", date, 
+                           "</i><br>Amount: ", dollar(amount)))) +
+  geom_line() +
+  scale_color_manual(values = c(income_palette[1], income_palette[2], income_palette[3],
+                                income_palette[4], income_palette[5], income_palette[6],
+                                income_palette[7], "black")) +
+  labs(title = "Total Income",
+       x = "Date",
+       y = "Income ($)",
+       col = NULL)
+ggplotly(income_plot, tooltip = "text")
+```
+
+We will display income by month to better contextualize what is encompassed by the total. Due to biweekly (rather than monthly) paychecks, the total will fluctuate intermittently.
+
+```{r monthly-income}
+income_month <- income %>% 
+  group_by(year, month, source) %>% 
+  summarize(amount = sum(amount), inputs = n(), .groups = "drop") %>% 
+  bind_rows(filter(income_total, source == "Total"))
+
+income_sources <- levels(income_total$source)
+
+income_plot_month <- income_month %>% 
+  ggplot(aes(x = month, y = amount, col = source, group = source, 
+             text = paste0("<b>", source, "</b><br><i>", format(month, "%B %Y"), 
+                           "</i><br>Amount: ", dollar(amount), "<br>Inputs: ", inputs))) +
+  geom_line() +
+  scale_color_manual(values = c(income_palette[1], income_palette[2], income_palette[3],
+                                income_palette[4], income_palette[5], income_palette[6],
+                                income_palette[7], "black")) + 
+  labs(title = "Total Income by Month",
+       x = NULL,
+       y = "Income ($)",
+       col = NULL)
+ggplotly(income_plot_month, tooltip = "text")
+```
