@@ -50,14 +50,11 @@ Note: Costco records only include expenses for groceries, so as not to skew the 
 ```{r grocery-data, include=FALSE}
 grocery_sheet <- get_grocery_data(authenticated)
 grocery <- grocery_sheet %>% 
+  format_date(add_week = TRUE) %>% 
   arrange(date) %>% 
-  mutate(date = as.Date(date),
-         store = as.factor(store),
+  mutate(store = as.factor(store),
          cost_per_item = cost / items,
-         shopper = as.factor(shopper),
-         week = floor_date(date, unit = "week"),
-         month = floor_date(date, unit = "month"),
-         year = year(date)) %>% 
+         shopper = as.factor(shopper)) %>% 
   group_by(store) %>% 
   mutate(store_label = as.factor(ifelse(n() < 5, "Other", as.character(store)))) %>% 
   ungroup()
@@ -428,10 +425,9 @@ To better examine overall spending, we will look at the monthly statements for e
 ```{r credit-card-data, include=FALSE}
 cc_sheet <- get_credit_card_data(authenticated)
 cc <- cc_sheet %>% 
-  arrange(date) %>% 
-  mutate(date = if_else(card == "Discover", as.Date(date) - 1, as.Date(date)),
-         year = year(date),
-         month = floor_date(date, unit = "month"))
+  mutate(date = if_else(card == "Discover", as.Date(date) - 1, as.Date(date))) %>% 
+  format_date() %>% 
+  arrange(date)
 ```
 
 ### Credit Card Expenses by Month
@@ -473,10 +469,8 @@ We will now examine the costs associated with utilities -- specifically, electri
 ```{r utility-data, include=FALSE}
 utilities_sheet <- get_utility_data(authenticated)
 utilities <- utilities_sheet %>% 
-  arrange(date) %>% 
-  mutate(date = as.Date(date),
-         year = year(date),
-         month = floor_date(date, unit = "month"))
+  format_date(add_quarter = TRUE) %>% 
+  arrange(date)
 ```
 
 ### Utility Expenses by Month
@@ -564,7 +558,6 @@ Where data is incomplete, we have scaled the available bills to a full quarter f
 
 ```{r quarterly-utilities, warning=FALSE}
 utilities_qtr <- utilities %>% 
-  mutate(quarter = yearquarter(date)) %>% 
   group_by(utility, quarter) %>% 
   summarize(cost = sum(cost), num_bills = n(), .groups = "drop")
 
@@ -695,6 +688,8 @@ Not surprisingly, changes in credit card spending is the biggest driver of the o
 # Income
 There are various sources of income, ranging from paychecks to gifts to reimbursements (e.g. work travel, taxes). Complete data ranges back to approximately May 2025.
 ```{r income-data, include=FALSE}
-income <- get_income_data(authenticated)
+income_sheet <- get_income_data(authenticated)
+income <- format_date(income_sheet) %>% 
+  mutate(source = as.factor(source))
 ```
 

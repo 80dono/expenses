@@ -1,5 +1,6 @@
 library(tidyverse)
 library(googlesheets4)
+library(tsibble)
 source("tools/generate_sample_data.R")
 
 
@@ -23,6 +24,24 @@ get_grocery_data <- function(authenticated = FALSE) {
     sample_data <- generate_sample_grocery_data()
     return(sample_data)
   }
+}
+
+#' Apply basic formatting that is relevant to all expense and income data sheets.
+#' 
+#' @param df The data frme you wish to format.
+#' @param add_week A boolean indicating whether to add a parameter for the week of the date; default is FALSE.
+#' @param add_month A boolean indicating whether to add a parameter for the month of the date; default is TRUE.
+#' @param add_quarter A boolean indicating whether to add a parameter for the quarter of the date; default is FALSE.
+#' @param add_year A boolean indicating whether to add a parameter for the year of the date; default is TRUE.
+#' @return A data frame with properly formatted dates.
+format_date <- function(df, add_week = FALSE, add_month = TRUE, add_quarter = FALSE, add_year = TRUE) {
+  df_fmt <- mutate(df, date = as.Date(date))
+  df_fmt$week <- if (add_week) floor_date(df_fmt$date, unit = "week")
+  df_fmt$month <- if (add_month) floor_date(df_fmt$date, unit = "month")
+  df_fmt$quarter <- if(add_quarter) yearquarter(df_fmt$date)
+  df_fmt$year <- if (add_year) year(df_fmt$date)
+  
+  return(df_fmt)
 }
 
 #' Retrieve credit card data, either from Google Sheet or by simulation
@@ -87,7 +106,7 @@ get_income_data <- function(authenticated = FALSE) {
     # Read from Google sheet if possible
     data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
                        range = "Income") %>% 
-      mutate(real = TRUE)
+      mutate(date = as.Date(date), real = TRUE)
     return(data)
   }
   else {
