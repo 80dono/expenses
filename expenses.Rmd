@@ -231,7 +231,7 @@ grocery_month_cost <- grocery_month_summary %>%
                 group = 1),,
             col = "blue") +
   geom_line(data = cpi_groceries, aes(x = as.Date(year_month), 
-                                      y = (cpi / 100) * mean(grocery_month_summary$cost)), 
+                                      y = (cpi / 100) * median(grocery_month_summary$cost)), 
                                       col = "orange") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
@@ -246,7 +246,7 @@ p2_month <- ggplotly(grocery_month_cost, tooltip = "text") %>%
 subplot(p1_month, p2_month, margin = 0.05, titleY = TRUE)
 ```
 
-The orange line is the Consumer Price Index (CPI) times the mean monthly grocery expenditure (to put it on a similar scale). The specific CPI series used is "Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted", obtained from the Bureau of Labor Statistics' public API.
+The orange line is the Consumer Price Index (CPI) times the median monthly grocery expenditure (to put it on a similar scale). The specific CPI series used is "Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted", obtained from the Bureau of Labor Statistics' public API.
 
 For the plot below, points have been jittered ($\pm$ 0.5 trips) to reduce overlap; trips can only be a whole number.
 
@@ -539,7 +539,6 @@ utilities_monthly_cost <- utilities_monthly_water %>%
   summarize(cost = sum(cost), utility = "Total",
             .groups = "drop") %>% 
   bind_rows(utilities_monthly_water)
-  # Reset utility order so Total is at the end
 utilities_monthly_cost$utility <- factor(utilities_monthly_cost$utility, 
                                          levels = c(setdiff(levels(as.factor(utilities_monthly_cost$utility)),
                                                             "Total"), 
@@ -732,6 +731,7 @@ There are various sources of income, ranging from paychecks to gifts to reimburs
 ```{r income-data, include=FALSE}
 income_sheet <- get_income_data(authenticated)
 income <- format_date(income_sheet) %>% 
+  filter(month > as.Date("2025-04-01")) %>% 
   mutate(source = as.factor(source))
 ```
 
