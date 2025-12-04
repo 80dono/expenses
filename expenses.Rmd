@@ -23,12 +23,18 @@ authenticated <- FALSE
 tryCatch(
   {
     # Initial steps:
-    #    - Create email.txt file (not included in Git repo)
+    #    - Create .Renviron file (not included in Git repo) with GARGLE_KEY_PATH and MY_EMAIL
     #    - Set use_oob = FALSE for initial run
-    gs4_auth(email = read_lines("email.txt"), scopes = "spreadsheets.readonly", use_oob = TRUE)
+    # gs4_auth(email = Sys.getenv("MY_EMAIL"), 
+    #          scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
+    #          cache = ".secrets")
+    
+    # Use Google Cloud Console service account
+    gs4_auth(path = Sys.getenv("GARGLE_KEY_PATH"), cache = FALSE)
     authenticated <- TRUE
   },
   error = function(err) {
+    # print(err)
     message("User is not authenticated.")
   })
 
@@ -362,7 +368,7 @@ grocery %>%
 ### Grocery Expenses by Shopper
 One shopper may be more prone to over-buying than the other. Do we see this in the overall data trend? Does shopping together temper this tendency? Note that we did not begin tracking shopper until approximately August 2025. The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
-```{r shopper-analysis, warning=FALSE}
+```{r shopper-analysis, warning=FALSE, out.width="100%"}
 shoppers_plot <- grocery %>% 
   drop_na() %>% 
   # Add number of trips per shopper
@@ -546,7 +552,7 @@ utilities_monthly_cost$utility <- factor(utilities_monthly_cost$utility,
 
 temp_month <- max(filter(utilities_monthly_cost, utility == "Water")$month) + months(1)
 water_monthly_proj <- filter(utilities_monthly_cost, utility == "Water", month == temp_month - months(1))
-while (month(temp_month) <= month(today())) {
+while (temp_month <= floor_date(today(), unit = "month")) {
   water_monthly_proj <- bind_rows(water_monthly_proj, 
                                   data.frame(utility = "Water", year = year(temp_month), 
                                              month = temp_month, real = FALSE, 

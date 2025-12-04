@@ -28,6 +28,7 @@ vignettes/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
+.secrets
 
 # knitr and R markdown default cache directories
 *_cache/
@@ -48,9 +49,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
-
-# Email name
-email.txt
 
 # Output files
 expenses.html
