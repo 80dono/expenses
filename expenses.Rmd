@@ -180,7 +180,7 @@ grocery_week_trips_cost <- grocery_week_summary %>%
 ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the polynomial fit in the plot above is `r round(r2_week, 2)`.
+The R-squared value for the third-order polynomial fit in the plot above is `r round(r2_week, 2)`.
 
 #### Grocery Expenses by Month
 We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past 365 days, but all other plots include data going back to January 2025.
@@ -234,11 +234,15 @@ grocery_month_cost <- grocery_month_summary %>%
   ggplot(aes(x = month, y = cost)) +
   geom_line(aes(text = paste0("<b>", format(month, "%B %Y"), "</b><br>Expenditure: ", 
                               dollar(cost), "<br>Trips: ", trips),
-                group = 1),,
+                group = 1),
             col = "blue") +
   geom_line(data = cpi_groceries, aes(x = as.Date(year_month), 
-                                      y = (cpi / 100) * median(grocery_month_summary$cost)), 
-                                      col = "orange") +
+                                      y = (cpi / 100) * median(grocery_month_summary$cost),
+                                      text = paste0("<b>", format(year_month, "%B %Y"), 
+                                                    "</b><br>CPI (scaled): ", 
+                                                    dollar((cpi / 100) * median(grocery_month_summary$cost))), 
+                                      group = 1), 
+            col = "orange") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
               col = "black", linetype = "dashed") +
   scale_x_date(date_labels = "%b %Y") +
@@ -275,7 +279,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
 ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the polynomial fit in the plot above is `r round(r2_month, 2)`.
+The R-squared value for the third-order polynomial fit in the plot above is `r round(r2_month, 2)`.
 
 ### Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
