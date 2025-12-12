@@ -7,7 +7,7 @@ library(tidyverse)
 #' 
 #' @param months The number of months worth of data you wish to generate; default is 5.
 #' @param trips_per_month The average number of trips to the grocery per month that you wish to simulate; default is 15.
-#' @return A data frame containing the date, cost, and type of utility for each bill, along with a boolean indicator for whether the data is real.
+#' @return A data frame containing the date, cost, and type of utility for each bill, along with a boolean indicator that the data is not real.
 generate_sample_grocery_data <- function(months = 5, trips_per_month = 15) {
   trips = months * trips_per_month
   date <- seq(as.Date(today() - months(months)), today(), by = "day") %>% 
@@ -30,10 +30,37 @@ generate_sample_grocery_data <- function(months = 5, trips_per_month = 15) {
 #' This function creates fake data resembling the actual utility data recorded, for the purposes of demonstrating capability without revealing personal information.
 #' 
 #' @param months The number of months worth of data you wish to generate; default is 5.
-#' @return A data frame containing the date, cost, and type of utility for each bill, along with a boolean indicator for whether the data is real.
+#' @return A data frame containing the date, cost, and type of utility for each bill, along with a boolean indicator that the data is not real.
 generate_sample_utility_data <- function(months = 5) {
   return(data.frame())
 }
+
+
+#' Generate sample insurance data
+#' 
+#' This function creates fake data resembling the actual insurance data recorded, for the purposes of demonstrating capability without revealing personal information.
+#' 
+#' @param costs A float or vector of floats indicating the monthly cost of the type(s) of insurance.
+#' @param types A string or vector of strings indicating the types of insurance associated with `costs`.
+#' @param months The number of months worth of data you wish to generate; default is 5.
+#' @return A data frame containing the date, cost, and type of insurance for each instance, along with a boolean indicator that the data is not real.
+generate_sample_insurance_data <- function(costs, types, months = 5) {
+  # Convert single values to vectors
+  if (!is.vector(costs)) {
+    costs <- c(as.numeric(costs))
+  }
+  if (!is.vector(types)) {
+    types <- c(as.character(types))
+  }
+  
+  # Add distributions for insurance costs by type (medical, dental, auto, etc.)
+  
+  dates <- seq(today() - months(months - 1), today(), by = "month")
+  df <- data.frame(date = dates, cost = costs, insurance = types, real = FALSE)
+  
+  return(df)
+}
+
 
 #' Generate sample income data
 #' 

@@ -52,7 +52,7 @@ All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
 
 # Expenses
 ## Groceries
-Note: Costco records only include expenses for groceries, so as not to skew the object of the analysis. This requires counting grocery items and manually calculating tax (most groceries are taxed at 1%, but some, including alcohol, are taxed at 6%), so accuracy is unlikely to be 100%. Additionally, it can be difficult to tell if some items are grocery expenses or not from their abbreviated name on the receipt. Nevertheless, this effort is sufficient to capture most of the additional expenses associated with infrequent bulk purchases from the store.
+Note: Costco and Target records only include expenses for groceries, so as not to skew the object of the analysis. This requires counting grocery items and manually calculating tax (most groceries are taxed at 1%, but some, including alcohol, are taxed at 6%), so accuracy is unlikely to be 100%. Additionally, it can be difficult to tell if some items are grocery expenses or not from their abbreviated name on the receipt. Nevertheless, this effort is sufficient to capture most of the additional expenses associated with infrequent bulk purchases from the store.
 
 ```{r grocery-data, include=FALSE}
 grocery_sheet <- get_grocery_data(authenticated)
@@ -691,24 +691,42 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ```
 
 ## Overall Monthly Expenses
-Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries).
+Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start.
 
-**ADD INSURANCE EXPENSES**
+**ADD AUTO AND RENTERS INSURANCE EXPENSES**
+```{r insurance-data, include=FALSE}
+insurance_sheet <- get_insurance_data(authenticated)
+insurance <- insurance_sheet %>% 
+  format_date(add_quarter = FALSE) %>% 
+  arrange(date) %>% 
+  filter(insurance %in% c("Medical", "Dental", "Vision"))
+
+# Insurance info is incomplete! Missing auto, renters, etc.
+insurance_total_cost <- insurance %>% 
+  group_by(year, month) %>% 
+  summarize(cost = sum(cost), insurance = "Total",
+            .groups = "drop") %>% 
+  bind_rows(insurance)
+```
 
 ```{r overall-monthly-costs, out.width="100%"}
 total_cc <- filter(cc_total_cost, card == "Total") %>% 
   select(month, cost)
 total_utils <- filter(utilities_total_cost, utility == "Total") %>% 
   select(month, cost)
+total_insurance <- filter(insurance_total_cost, insurance == "Total") %>% 
+  select(month, cost)
 total_costs <- full_join(total_cc, total_utils, by = "month") %>% 
+  full_join(total_insurance, by = "month") %>% 
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
   drop_na() %>% 
-  rename(cc = cost.x, utils = cost.y, groceries = cost) %>% 
-  mutate(rent = 2685, total = cc + utils + rent) # Don't include groceries since they are already part of cc
+  rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
+  mutate(rent = 2685, total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
-  mutate(expense = factor(expense, levels = c("cc", "groceries", "rent", "utils", "total"),
-                          labels = c("Credit Cards", "Groceries", "Rent", "Utilities", "Total")))
+  mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "utils", "total"),
+                          labels = c("Credit Cards", "Groceries", "Insurance", "Rent", "Utilities",
+                                     "Total")))
 
 # Set expenses palette
 expenses_palette <- hue_pal()(length(levels(total_costs_pivot$expense)) - 1)
@@ -721,8 +739,9 @@ total_cost_plot <-  total_costs_pivot %>%
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("Credit Cards" = expenses_palette[1], 
                                 "Groceries" = expenses_palette[2],
-                                "Rent" = expenses_palette[3],
-                                "Utilities" = expenses_palette[4],
+                                "Insurance" = expenses_palette[3],
+                                "Rent" = expenses_palette[4],
+                                "Utilities" = expenses_palette[5],
                                 "Total" = "black")) +
   labs(title = "Overall Expenses by Month",
        x = NULL, 
@@ -737,7 +756,7 @@ Not surprisingly, changes in credit card spending is the biggest driver of the o
 
 
 # Income
-There are various sources of income, ranging from paychecks to gifts to reimbursements (e.g. work travel, taxes). Complete data ranges back to approximately May 2025.
+There are various sources of income, ranging from paychecks to gifts to reimbursements (e.g. work travel, tax refund). Paychecks are recorded based on the net income after taxes, benefits, and other deductions. Complete data ranges back to approximately May 2025.
 ```{r income-data, include=FALSE}
 income_sheet <- get_income_data(authenticated)
 income <- format_date(income_sheet) %>% 
@@ -761,6 +780,8 @@ income_total$source <- factor(income_total$source,
 income_palette <- hue_pal()(length(levels(income_total$source)) - 1)
 ```
 
+<!--- The plot below shows income based on the date it was received (no time grouping). Note that the *y*-axis is on a logarithmic (base 10) scale to show greater detail at both lower income amounts (e.g. gifts, reimbursements) and higher amounts (paychecks). --->
+
 ```{r plot-income-total, eval=FALSE}
 # Total not on monthly scale
 income_plot <- income_total %>% 
@@ -768,6 +789,8 @@ income_plot <- income_total %>%
              text = paste0("<b>", source, "</b><br><i>", date, 
                            "</i><br>Amount: ", dollar(amount)))) +
   geom_line() +
+  geom_point(size = 0.5) +
+  scale_y_log10() +
   scale_color_manual(values = c(income_palette[1], income_palette[2], income_palette[3],
                                 income_palette[4], income_palette[5], income_palette[6],
                                 income_palette[7], "black")) +
@@ -778,27 +801,38 @@ income_plot <- income_total %>%
 ggplotly(income_plot, tooltip = "text")
 ```
 
-We will display income by month to better contextualize what is encompassed by the total. Due to biweekly (rather than monthly) paychecks, the total will fluctuate intermittently.
+We will display income by month to better contextualize what is encompassed by the total. Due to biweekly (rather than monthly) paychecks, the total will fluctuate intermittently. The *y*-axis is on a logarithmic (base 10) scale to show greater detail at both lower income amounts (e.g. gifts, reimbursements) and higher amounts (paychecks).
 
-```{r monthly-income, out.width="100%"}
+```{r monthly-income, warning=FALSE, out.width="100%"}
 income_month <- income %>% 
   group_by(year, month, source) %>% 
   summarize(amount = sum(amount), inputs = n(), .groups = "drop") %>% 
   bind_rows(filter(income_total, source == "Total"))
 
-income_sources <- levels(income_total$source)
+# Add expense line to legend (INCOMPLETE)
+color_map <- c(income_palette[1], income_palette[2], income_palette[3],
+               income_palette[4], income_palette[5], income_palette[6],
+               income_palette[7], "black", "red")
+names(color_map) <- c(levels(income_total$source), "Expenses")
 
 income_plot_month <- income_month %>% 
   ggplot(aes(x = month, y = amount, col = source, group = source, 
              text = paste0("<b>", source, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Amount: ", dollar(amount), "<br>Inputs: ", inputs))) +
   geom_line() +
-  scale_color_manual(values = c(income_palette[1], income_palette[2], income_palette[3],
-                                income_palette[4], income_palette[5], income_palette[6],
-                                income_palette[7], "black")) + 
+  geom_point(size = 0.5) +
+  geom_line(data = mutate(total_costs, total = total - ins) %>% select(month, total),
+            aes(x = month, y = total, group = 1,
+                text = paste0("<b>Expenses</b><br><i>", format(month, "%B %Y"), 
+                              "</i><br>Amount: ", dollar(total))),
+            col = "red", linetype = "dotted") +
+  scale_y_log10() +
+  scale_color_manual(values = color_map) + 
   labs(title = "Total Income by Month",
        x = NULL,
        y = "Income ($)",
        col = "Income Source")
 ggplotly(income_plot_month, tooltip = "text")
 ```
+
+When comparing with total expenses, make sure to consider that insurance costs (medical, dental, and vision) have already been deducted from the income recorded.
