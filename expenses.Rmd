@@ -810,10 +810,13 @@ income_month <- income %>%
   bind_rows(filter(income_total, source == "Total"))
 
 # Add expense line to legend (INCOMPLETE)
+# color_map <- c(income_palette[1], income_palette[2], income_palette[3],
+#                income_palette[4], income_palette[5], income_palette[6],
+#                income_palette[7], "black", "red")
+# names(color_map) <- c(levels(income_total$source), "Expenses")
 color_map <- c(income_palette[1], income_palette[2], income_palette[3],
                income_palette[4], income_palette[5], income_palette[6],
-               income_palette[7], "black", "red")
-names(color_map) <- c(levels(income_total$source), "Expenses")
+               income_palette[7], "black")
 
 income_plot_month <- income_month %>% 
   ggplot(aes(x = month, y = amount, col = source, group = source, 
@@ -821,11 +824,11 @@ income_plot_month <- income_month %>%
                            "</i><br>Amount: ", dollar(amount), "<br>Inputs: ", inputs))) +
   geom_line() +
   geom_point(size = 0.5) +
-  geom_line(data = mutate(total_costs, total = total - ins) %>% select(month, total),
-            aes(x = month, y = total, group = 1,
-                text = paste0("<b>Expenses</b><br><i>", format(month, "%B %Y"), 
-                              "</i><br>Amount: ", dollar(total))),
-            col = "red", linetype = "dotted") +
+  # geom_line(data = mutate(total_costs, total = total - ins) %>% select(month, total),
+  #           aes(x = month, y = total, group = 1,
+  #               text = paste0("<b>Expenses</b><br><i>", format(month, "%B %Y"), 
+  #                             "</i><br>Amount: ", dollar(total))),
+  #           col = "red", linetype = "dotted") +
   scale_y_log10() +
   scale_color_manual(values = color_map) + 
   labs(title = "Total Income by Month",
