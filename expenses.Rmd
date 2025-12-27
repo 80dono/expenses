@@ -73,24 +73,6 @@ grocery$store_label <- factor(grocery$store_label,
 grocery_last365 <- filter(grocery, date >= today() - days(365))
 ```
 
-```{r grocery-cpi-data, include=FALSE}
-# Get CPI data from the Bureau of Labor Statistics public API
-
-# Series: Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted
-series_id <- "CUUR0120SAF11"
-
-response <- POST(paste0("https://api.bls.gov/publicAPI/v1/timeseries/data/", series_id),
-                 add_headers("Content-Type" = "application/json"))
-content <- content(response, as = "parsed", type = "application/json")
-cpi_groceries <- content$Results$series[[1]]$data %>% 
-  map_dfr(as_tibble) %>% 
-  filter(periodName %in% month.name, year >= 2025) %>% # Remove annual aggregates and unnecessary years
-  mutate(year_month = yearmonth(paste(year, periodName)),
-         cpi = as.numeric(value)) %>% 
-  select(year_month, cpi) %>% 
-  tsibble(index = year_month)
-```
-
 
 ### Grocery Expenses over Time
 #### Grocery Expenses by Week
@@ -208,7 +190,27 @@ grocery_last365 %>%
         axis.text.x = element_text(margin = margin(t = -10)))
 ```
 
-For the following plots, we will only show data for completed months; the current month is not included. 
+For the following plots, we will only show data for completed months; the current month is not included.
+
+```{r grocery-cpi-data, include=FALSE, warning=FALSE}
+# Get CPI data from the Bureau of Labor Statistics public API
+
+# Series: Food at home in Middle Atlantic, all urban consumers, not seasonally adjusted
+series_id <- "CUUR0120SAF11"
+
+response <- POST(paste0("https://api.bls.gov/publicAPI/v1/timeseries/data/", series_id),
+                 add_headers("Content-Type" = "application/json"))
+content <- content(response, as = "parsed", type = "application/json")
+cpi_groceries <- content$Results$series[[1]]$data %>% 
+  map_dfr(as_tibble) %>% 
+  filter(periodName %in% month.name, year >= 2025) %>% # Remove annual aggregates and unnecessary years
+  mutate(year_month = yearmonth(paste(year, periodName)),
+         cpi = as.numeric(value)) %>% 
+  filter(!is.na(cpi)) %>% # Remove months with missing data (government shutdown, etc.)
+  select(year_month, cpi) %>% 
+  tsibble(index = year_month)
+```
+
 ```{r grocery-month-trips-cost, out.width="100%", warning=FALSE}
 grocery_month_summary <- grocery %>% 
   filter(date < floor_date(today(), unit = "months")) %>% 
@@ -331,7 +333,7 @@ grocery_item_cost <- grocery %>%
   geom_jitter(aes(group = 1,
                   text = paste0("<b>", store, "</b><br><i>", date,
                                 "</i><br>Items: ", items, "<br>Expenditure: ", dollar(cost))),
-              width = 0.5, height = 0) +
+              width = 0.5, height = 0, size = 0.75, alpha = 0.5) +
   geom_abline(intercept = 0, slope = sum(grocery$cost) / sum(grocery$items), 
               linetype = "dashed", linewidth = 1) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
@@ -383,7 +385,7 @@ shoppers_plot <- grocery %>%
   geom_jitter(aes(group = 1, 
                   text = paste0("<b>", shopper, "</b><br><i>", date, "</i><br>Store: ", store, 
                                 "<br>Items: ", items, "<br>Expenditure: ", dollar(cost))),
-              width = 0.5, height = 0) +
+              width = 0.5, height = 0, size = 0.75, alpha = 0.5) +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) +
   geom_smooth(data = grocery, mapping = aes(x = items, y = cost), 
               col = "black", linetype = "dashed",
