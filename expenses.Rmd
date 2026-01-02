@@ -31,6 +31,7 @@ tryCatch(
     
     # Use Google Cloud Console service account
     gs4_auth(path = Sys.getenv("GARGLE_KEY_PATH"), cache = FALSE)
+    message("Successfully authenticated!")
     authenticated <- TRUE
   },
   error = function(err) {
@@ -470,6 +471,8 @@ cc <- cc_sheet %>%
 ### Credit Card Expenses by Month
 Almost all of the credit cards have a statement due on a fixed day of the month (e.g. January 4th, February 4th, etc.), which means that their billing cycles can vary slightly in length. The USAA credit card has a fixed billing cycle of 31 days. The Discover card is paid off on the first of every month, however we will subtract one day from the payment dates so that they align with the month of expenses that they represent.
 
+The United card was cancelled in December 2025.
+
 ```{r monthly-credit-cards}
 cc_total_cost <- cc %>% 
   group_by(year, month) %>% 
@@ -629,7 +632,7 @@ if (max(filter(proj_data, utility == "Water")$quarter) < yearquarter(today())) {
                                     proj_cost = round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2)))
 }
 
-if (nrow(proj_data) > 0) {
+if (nrow(proj_data) > 1) {
   total_row <- data.frame(utility = "Total",
                           quarter = proj_data$quarter[1],
                           cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1], 
