@@ -71,7 +71,7 @@ grocery$store_label <- factor(grocery$store_label,
                                          "Other")
 )
 
-grocery_last365 <- filter(grocery, date >= today() - days(365))
+grocery_1year <- filter(grocery, date >= floor_date(today(), "month") - months(12))
 ```
 
 
@@ -79,18 +79,18 @@ grocery_last365 <- filter(grocery, date >= today() - days(365))
 #### Grocery Expenses by Week
 From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
-Below is the total expenditure per week for the last 365 days, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
+Below is the total expenditure per week for the last year, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
 
 ```{r grocery-week}
-mean_weekly_cost <- mean(summarize(group_by(grocery_last365, week), 
+mean_weekly_cost <- mean(summarize(group_by(grocery_1year, week), 
                                    cost = sum(cost),
                                    .groups = "drop")$cost)
-grocery_last365 %>% 
+grocery_1year %>% 
   ggplot(aes(x = week, y = cost)) +
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean_weekly_cost,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = as.Date(min(grocery_last365$week) - days(14)), 
+  annotate("label", x = as.Date(min(grocery_1year$week) - days(14)), 
            y = mean_weekly_cost, 
            label = round(mean_weekly_cost, 2)) +
   scale_x_date(date_labels = "%b %Y") +
@@ -166,19 +166,19 @@ ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared s
 The R-squared value for the third-order polynomial fit in the plot above is `r round(r2_week, 2)`.
 
 #### Grocery Expenses by Month
-We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past 365 days, but all other plots include data going back to January 2025.
+We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past year, but all other plots include data going back to January 2025.
 
 ```{r grocery-month}
-mean_monthly_cost <- mean(summarize(group_by(grocery_last365, month), 
+mean_monthly_cost <- mean(summarize(group_by(grocery_1year, month), 
                                     cost = sum(cost),
                                     .groups = "drop")$cost)
-grocery_last365 %>% 
+grocery_1year %>% 
   group_by(year, month) %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_col(aes(fill = store_label)) +
   geom_hline(yintercept = mean_monthly_cost,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = min(grocery_last365$month) - days(14), y = mean_monthly_cost, 
+  annotate("label", x = min(grocery_1year$month) - days(14), y = mean_monthly_cost, 
            label = round(mean_monthly_cost, 2)) +
   scale_x_date(breaks = "1 month", date_labels = "%b\n%Y") +
   # scale_y_continuous(n.breaks = 10) +
