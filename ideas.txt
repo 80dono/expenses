@@ -1,0 +1,5 @@
+Add password protection for access to the document (e.g. "Who are you?")
+Use pop-up window and blur out background for password input?
+If password is incorrect, respond with "Away with you, I do not know who you are!" (Bible quote)
+Different pages for expenses, income, etc.
+Make home page a dashboard-like summary?
