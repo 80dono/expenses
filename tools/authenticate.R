@@ -24,11 +24,9 @@ google_authenticate <- function(service_account_key = NULL, gmail = NULL) {
       # Attempt email authentication as fallback
       tryCatch(
         {
-          gs4_auth(
-            email  = gmail,
-            scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
-            cache  = ".secrets"
-          )
+          gs4_auth(email  = gmail,
+                   scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
+                   cache  = ".secrets")
           message("Successfully authenticated with email!")
           authenticated <- TRUE
         },
