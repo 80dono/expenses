@@ -1,0 +1,11 @@
+name: "Donofrio Finances"
+output_dir: "."
+navbar:
+  title: "Finances"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Expenses"
+      href: expenses.html
+    - text: "Income"
+      href: income.html
