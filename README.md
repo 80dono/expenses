@@ -9,6 +9,7 @@ This is a simple project I created to better understand my expenses. Currently i
     └── get_data.R                    # Retrieves data, either from the Google Sheet or by generating sample data
 ├── .gitignore
 ├── README.md
+├── manifest.json                     # Lists file dependencies for publishing to Posit Connect
 └── expenses.Rmd                      # Main script for generating report
 ```
 

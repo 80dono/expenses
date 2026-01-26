@@ -41,6 +41,9 @@ tryCatch(
 
 source("tools/get_data.R")
 
+# Write manifest.json file
+rsconnect::writeManifest()
+
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5),
              panel.background = element_blank(),
