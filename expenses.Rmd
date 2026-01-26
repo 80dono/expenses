@@ -350,7 +350,7 @@ grocery_item_cost <- grocery %>%
 ggplotly(grocery_item_cost, tooltip = "text")
 ```
 
-The dashed line in the plot above represents the overall average cost per item (*x*-intercept = 0 items, slope = mean cost).
+The dashed line in the plot above represents the overall average cost per item ($x$-intercept = 0 items, slope = mean cost).
 
 ### Grocery Expenses by Day of Week
 Do we spend more on groceries on certain days of the week? Which days do we most often find ourselves making a trip to the store?
@@ -698,7 +698,7 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ## Overall Monthly Expenses
 Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start.
 
-**ADD AUTO AND RENTERS INSURANCE EXPENSES**
+**ADD AUTO INSURANCE AND TITHING EXPENSES**
 ```{r insurance-data, include=FALSE}
 insurance_sheet <- get_insurance_data(authenticated)
 insurance <- insurance_sheet %>% 
