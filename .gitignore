@@ -50,6 +50,10 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# Site build
+_site/site_libs
+_site/*_files
+
 # Output files
 expenses.html
 expenses_files/

@@ -1,12 +1,9 @@
 ---
 title: "<center>Finances</center>"
 subtitle: "Table of Contents"
-output: 
-  html_document:
-    toc: true
 # Knit to HTML folder
-knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_dir = "html") })
+# knit: (function(inputFile, encoding) {
+#   rmarkdown::render(inputFile, encoding = encoding, output_dir = "html") })
 ---
 
 ```{r setup, include=FALSE}

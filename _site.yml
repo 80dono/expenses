@@ -1,0 +1,15 @@
+name: "donofrio-finances"
+output_dir: _site
+exclude: ["ideas.txt", "*_files", "css", "tools"]
+navbar:
+  title: "Finances"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Expenses"
+      href: expenses.html
+    # - text: "Income"
+      # href: income.html
+output:
+  html_document:
+    toc: true
