@@ -22,7 +22,7 @@
 .Rproj.user/
 expenses.Rproj
 
-# produced vignettes
+# Produced vignettes
 vignettes/*.html
 vignettes/*.pdf
 
@@ -51,8 +51,7 @@ po/*~
 rsconnect/
 
 # Site build
-_site/site_libs
-_site/*_files
+_site/
 
 # Output files
 expenses.html

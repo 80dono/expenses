@@ -1,6 +1,9 @@
 ---
-title: "<center>Expenses</center>"
-subtitle: "Table of Contents"
+title: "<center>Income</center>"
+# subtitle: "Table of Contents"
+output:
+  html_document:
+    toc: false
 ---
 
 ```{r setup, include=FALSE}
@@ -27,8 +30,7 @@ theme_update(plot.title = element_text(hjust = 0.5),
 
 All data in this report is **`r if_else(authenticated, "REAL", "SIMULATED")`**.
 
-
-# Income
+# Income by Month
 There are various sources of income, ranging from paychecks to gifts to reimbursements (e.g. work travel, tax refund). Paychecks are recorded based on the net income after taxes, benefits, and other deductions. Complete data ranges back to approximately May 2025.
 ```{r income-data, include=FALSE}
 income_sheet <- get_income_data(authenticated)

@@ -8,8 +8,8 @@ navbar:
       href: index.html
     - text: "Expenses"
       href: expenses.html
-    # - text: "Income"
-      # href: income.html
+    - text: "Income"
+      href: income.html
 output:
   html_document:
     toc: true
