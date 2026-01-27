@@ -1,9 +1,6 @@
 ---
 title: "<center>Income</center>"
-# subtitle: "Table of Contents"
-output:
-  html_document:
-    toc: false
+subtitle: "Table of Contents"
 ---
 
 ```{r setup, include=FALSE}

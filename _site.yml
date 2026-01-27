@@ -1,15 +1,23 @@
 name: "donofrio-finances"
-output_dir: _site
-exclude: ["ideas.txt", "*_files", "css", "tools"]
+output_dir: "_site"
+
+exclude:
+  - ideas.txt
+  - css
+  - tools
+
 navbar:
   title: "Finances"
   left:
     - text: "Home"
-      href: index.html
+      href: index.Rmd
     - text: "Expenses"
-      href: expenses.html
+      href: expenses.Rmd
     - text: "Income"
-      href: income.html
+      href: income.Rmd
+
 output:
   html_document:
     toc: true
+    lib_dir: "site_libs"
+    self_contained: false

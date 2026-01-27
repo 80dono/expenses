@@ -52,7 +52,9 @@ rsconnect/
 
 # Site build
 _site/
+site_libs/
 
 # Output files
-expenses.html
+*.html
 expenses_files/
+
