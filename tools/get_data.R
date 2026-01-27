@@ -28,7 +28,7 @@ get_grocery_data <- function(authenticated = FALSE) {
 
 #' Apply basic formatting that is relevant to all expense and income data sheets.
 #' 
-#' @param df The data frme you wish to format.
+#' @param df The data frame you wish to format.
 #' @param add_week A boolean indicating whether to add a parameter for the week of the date; default is FALSE.
 #' @param add_month A boolean indicating whether to add a parameter for the month of the date; default is TRUE.
 #' @param add_quarter A boolean indicating whether to add a parameter for the quarter of the date; default is FALSE.
@@ -79,11 +79,11 @@ get_utility_data <- function(authenticated = FALSE) {
     data <- read_sheet("https://docs.google.com/spreadsheets/d/1-qP05bK-Vwapjy7cE382MNJpsaJebitlniGzDfrw-7k/edit?gid=0#gid=0",
                        range = "Utilities") %>% 
       # Auto-generate Internet billing data, since cost ($89.99) and billing date (4th of the month) are fixed
-      bind_rows(data.frame(date = seq.Date(as.Date("10/4/2024", "%m/%d/%Y"),
-                                           floor_date(today()) + 3, 
-                                           by = "month"),
-                           cost = 89.99,
-                           utility = "Internet")) %>% 
+      bind_rows(tibble(date = seq.Date(as.Date("10/4/2024", "%m/%d/%Y"),
+                                       floor_date(today()) + 3, 
+                                       by = "month"),
+                       cost = 89.99,
+                       utility = "Internet")) %>% 
       mutate(cost = if_else(utility == "Internet" & date > as.Date("2025-12-01"), # ADD END DATE
                             64.99, cost),
              real = TRUE)

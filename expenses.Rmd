@@ -520,7 +520,8 @@ utilities_monthly_water <- utilities %>%
   mutate(expanded = if_else(is_water,
                             # Convert water from quarterly to monthly using average cost
                             list(tibble(utility = "Water",
-                                        month = seq(month %m-% months(2), by = "1 month", length.out = 3),
+                                        month = seq(month %m-% months(2), by = "1 month", 
+                                                    length.out = 3),
                                         cost = cost / 3)),
                             list(tibble(utility = utility, month = month, cost = cost)))) %>%
   # Deconstruct back to a data frame
@@ -543,9 +544,10 @@ temp_month <- max(filter(utilities_monthly_cost, utility == "Water")$month) + mo
 water_monthly_proj <- filter(utilities_monthly_cost, utility == "Water", month == temp_month - months(1))
 while (temp_month <= floor_date(today(), unit = "month")) {
   water_monthly_proj <- bind_rows(water_monthly_proj, 
-                                  data.frame(utility = "Water", year = year(temp_month), 
-                                             month = temp_month, real = FALSE, 
-                                             cost = round(mean(filter(utilities_monthly_cost, utility == "Water")$cost), 2)))
+                                  tibble(utility = "Water", year = year(temp_month), 
+                                         month = temp_month, real = FALSE, 
+                                         cost = round(mean(filter(utilities_monthly_cost, 
+                                                                  utility == "Water")$cost), 2)))
   temp_month <- temp_month + months(1)
 }
 
@@ -607,16 +609,17 @@ proj_data <- utilities_qtr %>%
   mutate(proj_cost = round(cost * (3 / num_bills), 2))
 if (max(filter(proj_data, utility == "Water")$quarter) < yearquarter(today())) {
   proj_data <- bind_rows(proj_data, 
-                         data.frame(utility = "Water", quarter = yearquarter(today()), 
-                                    cost = 0,
-                                    proj_cost = round(mean(filter(utilities_qtr_cost, utility == "Water")$cost), 2)))
+                         tibble(utility = "Water", quarter = yearquarter(today()), 
+                                cost = 0,
+                                proj_cost = round(mean(filter(utilities_qtr_cost,
+                                                              utility == "Water")$cost), 2)))
 }
 
 if (nrow(proj_data) > 1) {
-  total_row <- data.frame(utility = "Total",
-                          quarter = proj_data$quarter[1],
-                          cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1], 
-                                        utility == "Total")$cost) %>% 
+  total_row <- tibbe(utility = "Total",
+                     quarter = proj_data$quarter[1],
+                     cost = filter(utilities_qtr_cost, quarter == proj_data$quarter[1],
+                                   utility == "Total")$cost) %>% 
     mutate(proj_cost = cost + round(sum(proj_data$proj_cost) - sum(proj_data$cost), 2))
   prev_data <- filter(utilities_qtr_cost, quarter == proj_data$quarter[1] - 1) %>%
     mutate(proj_cost = cost)
@@ -697,7 +700,7 @@ insurance_total_cost <- insurance %>%
 ```{r tithing}
 sundays <- seq.Date(from = as.Date("2025-03-18"), to = today(), by = "day")
 sundays <- sundays[weekdays(sundays) == "Sunday"]
-tithing <- data.frame(date = sundays, cost = 50) %>% 
+tithing <- tibble(date = sundays, cost = 50) %>% 
   format_date()
 ```
 
