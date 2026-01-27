@@ -10,11 +10,11 @@ navbar:
   title: "Finances"
   left:
     - text: "Home"
-      href: index.Rmd
+      href: index.html
     - text: "Expenses"
-      href: expenses.Rmd
+      href: expenses.html
     - text: "Income"
-      href: income.Rmd
+      href: income.html
 
 output:
   html_document:
