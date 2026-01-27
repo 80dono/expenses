@@ -1,16 +1,12 @@
 ---
 title: "<center>Finances</center>"
 subtitle: "Table of Contents"
-# Knit to HTML folder
-# knit: (function(inputFile, encoding) {
-#   rmarkdown::render(inputFile, encoding = encoding, output_dir = "html") })
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, fig.width = 8, fig.align = "center")
 
 library(tidyverse)
-library(googlesheets4)
 library(httr)
 library(jsonlite)
 library(scales)
@@ -19,27 +15,12 @@ library(DT)
 library(tsibble)
 library(cowplot)
 
-authenticated <- FALSE
-tryCatch(
-  {
-    # Initial steps:
-    #    - Create .Renviron file (not included in Git repo) with GARGLE_KEY_PATH and MY_EMAIL
-    #    - Set use_oob = FALSE for initial run
-    # gs4_auth(email = Sys.getenv("MY_EMAIL"), 
-    #          scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
-    #          cache = ".secrets")
-    
-    # Use Google Cloud Console service account
-    gs4_auth(path = Sys.getenv("GARGLE_KEY_PATH"), cache = FALSE)
-    message("Successfully authenticated!")
-    authenticated <- TRUE
-  },
-  error = function(err) {
-    # print(err)
-    message("User is not authenticated.")
-  })
-
+source("tool/authenticate.R")
 source("tools/get_data.R")
+
+# Authenticate user
+authenticated <- google_authenticate(service_account_key = Sys.getenv("GARGLE_KEY_PATH"),
+                                     gmail = Sys.getenv("MY_EMAIL"))
 
 theme_update(plot.title = element_text(hjust = 0.5), 
              plot.subtitle = element_text(hjust = 0.5),
