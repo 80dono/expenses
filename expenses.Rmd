@@ -678,7 +678,7 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 # Overall Monthly Expenses
 Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start.
 
-**ADD AUTO INSURANCE AND TITHING EXPENSES**
+**ADD AUTO INSURANCE EXPENSES**
 ```{r insurance-data, include=FALSE}
 insurance_sheet <- get_insurance_data(authenticated)
 insurance <- insurance_sheet %>% 
@@ -694,6 +694,13 @@ insurance_total_cost <- insurance %>%
   bind_rows(insurance)
 ```
 
+```{r tithing}
+sundays <- seq.Date(from = as.Date("2025-03-18"), to = today(), by = "day")
+sundays <- sundays[weekdays(sundays) == "Sunday"]
+tithing <- data.frame(date = sundays, cost = 50) %>% 
+  format_date()
+```
+
 ```{r overall-monthly-costs, out.width="100%"}
 total_cc <- filter(cc_total_cost, card == "Total") %>% 
   select(month, cost)
@@ -701,17 +708,22 @@ total_utils <- filter(utilities_total_cost, utility == "Total") %>%
   select(month, cost)
 total_insurance <- filter(insurance_total_cost, insurance == "Total") %>% 
   select(month, cost)
+total_tithing <- tithing %>% 
+  group_by(month) %>% 
+  summarize(cost = sum(cost), .groups = "drop")
 total_costs <- full_join(total_cc, total_utils, by = "month") %>% 
   full_join(total_insurance, by = "month") %>% 
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
+  full_join(total_tithing, by = "month") %>% 
   drop_na() %>% 
-  rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
-  mutate(rent = 2685, total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
+  rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y, tithe = cost) %>% 
+  mutate(rent = 2685, total = cc + utils + rent + ins + tithe) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
-  mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "utils", "total"),
-                          labels = c("Credit Cards", "Groceries", "Insurance", "Rent", "Utilities",
-                                     "Total")))
+  mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "tithe", "utils",
+                                              "total"),
+                          labels = c("Credit Cards", "Groceries", "Insurance", "Rent",  "Tithing",
+                                     "Utilities", "Total")))
 
 # Set expenses palette
 expenses_palette <- hue_pal()(length(levels(total_costs_pivot$expense)) - 1)
