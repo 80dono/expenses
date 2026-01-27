@@ -22,7 +22,7 @@ generate_sample_grocery_data <- function(months = 5, trips_per_month = 15) {
     round(2)
   shopper <- sample(c("Jack", "Jill", "Both"), trips, prob = c(0.4, 0.45, 0.15))
   
-  return(data.frame(date, cost, items, store, shopper, real = FALSE))
+  return(tibble(date, cost, items, store, shopper, real = FALSE))
 }
 
 #' Generate sample utility data
@@ -32,7 +32,55 @@ generate_sample_grocery_data <- function(months = 5, trips_per_month = 15) {
 #' @param months The number of months worth of data you wish to generate; default is 5.
 #' @return A data frame containing the date, cost, and type of utility for each bill, along with a boolean indicator that the data is not real.
 generate_sample_utility_data <- function(months = 5) {
-  return(data.frame())
+  # Utilities and their base monthly cost ranges
+  utility_profiles <- list(Phone = list(base = 60, noise = 5),
+                           Internet = list(base = 80, noise = 8),
+                           Water = list(base = 40, noise = 10),
+                           Electricity = list(base = 120, noise = 40),
+                           Gas = list(base = 50, noise = 30))
+  
+  dates <- seq(today() - months(months - 1), today(), by = "month")
+  
+  #' Seasonal multiplier for simulated utility data
+  #' 
+  #' @param utility Utility type
+  #' @param month_num Numeric representation of the month for that utility bill (1 = Jan, ..., 12 = Dec)
+  #' @return A numeric representing the dollar cost of that utility for the given month
+  seasonal_factor <- function(utility, month_num) {
+    if (utility == "Electricity") {
+      # High in winter & summer
+      return(1 + 0.3 * cos((month_num - 1) * pi/6))
+    }
+    if (utility == "Gas") {
+      # High in winter, low in summer
+      return(1 + 0.5 * cos((month_num - 1) * pi/6))
+    }
+    if (utility == "Water") {
+      # Slightly higher in summer
+      return(1 + 0.15 * sin((month_num - 1) * pi/6))
+    }
+    # Phone & Internet stable
+    return(1)
+  }
+  
+  # Generate data for each month
+  df <- map_df(dates, function(d) {
+    month_num <- month(d)
+    
+    map_df(names(utility_profiles), function(u) {
+      base <- utility_profiles[[u]]$base
+      noise <- utility_profiles[[u]]$noise
+      season <- seasonal_factor(u, month_num)
+      
+      tibble(date = d, utility = u, cost = round(rnorm(1, mean = base * season, sd = noise), 2))
+    })
+  })
+  
+  
+  df <- mutate(df, utility = as.factor(utility), real = FALSE)
+  
+  
+  return(df)
 }
 
 
@@ -56,7 +104,7 @@ generate_sample_insurance_data <- function(costs, types, months = 5) {
   # Add distributions for insurance costs by type (medical, dental, auto, etc.)
   
   dates <- seq(today() - months(months - 1), today(), by = "month")
-  df <- data.frame(date = dates, cost = costs, insurance = types, real = FALSE)
+  df <- tibble(date = dates, cost = costs, insurance = types, real = FALSE)
   
   return(df)
 }
@@ -74,7 +122,7 @@ generate_sample_income_data <- function(salary, months = 5, interval = "1 month"
   dates <- seq(today() - months(months - 1), today(), by = interval)
   paycheck <- (salary / 12) / (length(dates) / months)
   birthday <- sample(seq.Date(min(dates), max(dates), by = "day"), 1)
-  df <- data.frame(date = dates, income = round(paycheck, 2), source = "Dunder Mifflin", real = FALSE) %>% 
+  df <- tibble(date = dates, income = round(paycheck, 2), source = "Dunder Mifflin", real = FALSE) %>% 
     add_row(date = birthday, income = 100, source = "Gift", real = FALSE)
   
   return(df)
