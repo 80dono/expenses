@@ -26,9 +26,9 @@ authenticated <- google_authenticate(service_account_key = Sys.getenv("GARGLE_KE
                                      gmail = Sys.getenv("MY_EMAIL"))
 
 # Write manifest.json file
-rsconnect::writeManifest()
+# rsconnect::writeManifest()
 
-theme_update(plot.title = element_text(hjust = 0.5), 
+theme_update(plot.title = element_text(hjust = 0.5),
              plot.subtitle = element_text(hjust = 0.5),
              panel.background = element_blank(),
              panel.grid.major = element_blank(),
@@ -534,7 +534,9 @@ utilities_monthly_water <- utilities %>%
   ungroup() %>% 
   select(expanded) %>% 
   unnest(expanded) %>% 
-  mutate(year = year(month))
+  mutate(year = year(month)) %>% 
+  group_by(utility, year, month) %>% 
+  summarize(cost = sum(cost), .groups = "drop")
 
 utilities_monthly_cost <- utilities_monthly_water %>% 
   group_by(year, month) %>% 
@@ -715,7 +717,7 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
-  mutate(rent = 2685, total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
+  mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 4000), total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
   mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "utils", "total"),
