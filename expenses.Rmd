@@ -44,6 +44,7 @@ Note: Costco and Target records only include expenses for groceries, so as not t
 
 ```{r grocery-data, include=FALSE}
 grocery_sheet <- get_grocery_data(authenticated)
+label_cutoff <- round(0.05 * nrow(grocery_sheet))
 grocery <- grocery_sheet %>% 
   format_date(add_week = TRUE) %>% 
   arrange(date) %>% 
@@ -51,7 +52,7 @@ grocery <- grocery_sheet %>%
          cost_per_item = cost / items,
          shopper = as.factor(shopper)) %>% 
   group_by(store) %>% 
-  mutate(store_label = as.factor(ifelse(n() < 5, "Other", as.character(store)))) %>% 
+  mutate(store_label = as.factor(ifelse(n() < label_cutoff, "Other", as.character(store)))) %>% 
   ungroup()
 grocery$store_label <- factor(grocery$store_label, 
                               levels = c(setdiff(levels(grocery$store_label), "Other"), 
