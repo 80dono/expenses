@@ -67,7 +67,7 @@ grocery_1year <- filter(grocery, date >= floor_date(today(), "month") - months(1
 #### Grocery Expenses by Week
 From 01/10/2025 (when we started continuously tracking trips to the grocery store) to `r format(max(grocery$date), "%m/%d/%Y")`, we went to the grocery store `r sum(grocery$date >= as.Date("2025-01-09"))` times: an average of `r round(sum(grocery$date >= as.Date("2025-01-09")) / as.numeric(difftime(max(grocery$date), as.Date("2025-01-09"), units = "weeks")), 2)` times per week.
 
-Below is the total expenditure per week for the last year, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than five times are grouped as "Other".
+Below is the total expenditure per week for the last year, with each color in the stacked bar chart corresponding to the amount spent at a given store that week. Stores that have been visited less than 5% of the time are grouped as "Other".
 
 ```{r grocery-week}
 mean_weekly_cost <- mean(summarize(group_by(grocery_1year, week), 
@@ -313,7 +313,7 @@ grocery %>%
 
 Note that for Trader Joe's and Wegmans, the number of items is counted manually, so errors may be present.
 
-We will now plot the ratio of number of items and cost. Only stores that have been visited five or more times will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
+We will now plot the ratio of number of items and cost. Only stores that make up at least 5% of the trips will be plotted, though all stores are included in the overall average cost line (dashed). The plot is slightly jittered ($\pm$ 0.5 items) to improve visualization.
 
 ```{r item-cost-scatterplot, warning=FALSE, out.width="100%"}
 grocery_item_cost <- grocery %>% 
@@ -566,6 +566,7 @@ utilities_monthly_cost_plot <- utilities_monthly_cost %>%
   ggplot(aes(x = month, y = cost, col = utility, group = utility,
              text = paste0("<b>", utility, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Cost: ", dollar(cost)))) +
+  geom_vline(xintercept = as.Date("2026-02-01"), linetype = "dashed") +
   geom_line() +
   geom_line(data = water_monthly_proj, 
             aes(x = month, y = cost, col = utility, group = utility,
@@ -593,6 +594,7 @@ ggplotly(utilities_monthly_cost_plot, tooltip = "text") %>%
                        orientation = "h"))
 ```
 
+Note: there was no electricity bill for February 2026 as it did not fall within the 32-34-day billing cycle; electricity usage for that month is reflected in the March 2026 bill (on 3/3/2026).
 
 ### Utility Expenses by Quarter
 Alternatively, instead of artificially converting water to a monthly expense, we can aggregate the other utilities to match the quarterly scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the true overall trend for all utilities with this standard basis of comparison.
@@ -690,15 +692,13 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ## Overall Monthly Expenses
 Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start.
 
-**ADD AUTO INSURANCE AND TITHING EXPENSES**
+**ADD TITHING EXPENSES**
 ```{r insurance-data, include=FALSE}
 insurance_sheet <- get_insurance_data(authenticated)
 insurance <- insurance_sheet %>% 
   format_date(add_quarter = FALSE) %>% 
-  arrange(date) %>% 
-  filter(insurance %in% c("Medical", "Dental", "Vision"))
+  arrange(date)
 
-# Insurance info is incomplete! Missing auto, renters, etc.
 insurance_total_cost <- insurance %>% 
   group_by(year, month) %>% 
   summarize(cost = sum(cost), insurance = "Total",
@@ -718,7 +718,8 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
-  mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 4000), total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
+  # ADD HOA EXPENSE - $146.22
+  mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 3785.65), total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
   mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "utils", "total"),
