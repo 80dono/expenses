@@ -581,9 +581,10 @@ utilities_monthly_cost_plot <- utilities_monthly_cost %>%
                 group = utility)) +
   scale_x_date(date_labels = "%b %Y") +
   scale_color_manual(values = c("Electricity" = utils_palette[2], 
-                                "Water" = utils_palette[3],
-                                "Phone" = utils_palette[1],
+                                "Gas" = utils_palette[5],
                                 "Internet" = utils_palette[4],
+                                "Phone" = utils_palette[1],
+                                "Water" = utils_palette[3],
                                 "Total" = "black")) +
   labs(title = "Utility Costs by Month",
        x = NULL, 
@@ -657,10 +658,11 @@ if (nrow(proj_data) > 1) {
                                 "</i><br>Cost: ", dollar(cost)), 
                   group = utility)) +
     scale_x_yearquarter(date_labels = "%b %Y") +
-    scale_color_manual(values = c("Electricity" = utils_palette[2], 
-                                  "Water" = utils_palette[3],
-                                  "Phone" = utils_palette[1],
+    scale_color_manual(values = c("Electricity" = utils_palette[2],
+                                  "Gas" = utils_palette[5],
                                   "Internet" = utils_palette[4],
+                                  "Phone" = utils_palette[1],
+                                  "Water" = utils_palette[3],
                                   "Total" = "black")) +
     labs(title = "Utility Costs by Quarter",
          x = NULL, 
@@ -673,10 +675,11 @@ if (nrow(proj_data) > 1) {
                                 "</i><br>Cost: ", dollar(cost)), 
                   group = utility)) +
     scale_x_yearquarter(date_labels = "%b %Y") +
-    scale_color_manual(values = c("Electricity" = utils_palette[2], 
-                                  "Water" = utils_palette[3],
-                                  "Phone" = utils_palette[1],
+    scale_color_manual(values = c("Electricity" = utils_palette[2],
+                                  "Gas" = utils_palette[5],
                                   "Internet" = utils_palette[4],
+                                  "Phone" = utils_palette[1],
+                                  "Water" = utils_palette[3],
                                   "Total" = "black")) +
     labs(title = "Utility Costs by Quarter",
          x = NULL, 
@@ -718,13 +721,15 @@ total_costs <- full_join(total_cc, total_utils, by = "month") %>%
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
-  # ADD HOA EXPENSE - $146.22
-  mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 3785.65), total = cc + utils + rent + ins) # Don't include groceries since they are already part of cc
+  mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 3785.65), 
+         hoa = if_else(month > as.Date("2026-02-01"), 146.22, NA),
+         total = cc + utils + rent + hoa + ins) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
-  mutate(expense = factor(expense, levels = c("cc", "groceries", "ins", "rent", "utils", "total"),
+  mutate(expense = factor(expense, 
+                          levels = c("cc", "groceries", "ins", "rent", "utils", "hoa", "total"),
                           labels = c("Credit Cards", "Groceries", "Insurance", "Rent", "Utilities",
-                                     "Total")))
+                                     "HOA", "Total")))
 
 # Set expenses palette
 expenses_palette <- hue_pal()(length(levels(total_costs_pivot$expense)) - 1)
@@ -740,6 +745,7 @@ total_cost_plot <-  total_costs_pivot %>%
                                 "Insurance" = expenses_palette[3],
                                 "Rent" = expenses_palette[4],
                                 "Utilities" = expenses_palette[5],
+                                "HOA" = expenses_palette[6],
                                 "Total" = "black")) +
   labs(title = "Overall Expenses by Month",
        x = NULL, 
