@@ -719,11 +719,12 @@ total_insurance <- filter(insurance_total_cost, insurance == "Total") %>%
 total_costs <- full_join(total_cc, total_utils, by = "month") %>% 
   full_join(total_insurance, by = "month") %>% 
   full_join(select(grocery_month_summary, month, cost), by = "month") %>% 
+  # Exclude the current month if incomplete
   drop_na() %>% 
   rename(cc = cost.x, utils = cost.y, ins = cost.x.x, groceries = cost.y.y) %>% 
   mutate(rent = if_else(month < as.Date("2026-03-01"), 2685, 3785.65), 
-         hoa = if_else(month > as.Date("2026-02-01"), 146.22, NA),
-         total = cc + utils + rent + hoa + ins) # Don't include groceries since they are already part of cc
+         hoa = if_else(month > as.Date("2026-02-01"), 146.22, NA_real_),
+         total = rowSums(across(c(cc, utils, rent, hoa, ins)), na.rm = TRUE)) # Don't include groceries since they are already part of cc
 total_costs_pivot <- total_costs %>% 
   pivot_longer(!month, names_to = "expense", values_to = "cost") %>% 
   mutate(expense = factor(expense, 
