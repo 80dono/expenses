@@ -57,3 +57,4 @@ site_libs/
 # Output files
 expenses.html
 expenses_files/
+.positai

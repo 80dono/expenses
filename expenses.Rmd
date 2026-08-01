@@ -221,6 +221,7 @@ grocery_month_trips <- grocery_month_summary %>%
        y = "Number of Trips")
 p1_month <- ggplotly(grocery_month_trips, tooltip = "text")
 
+start_cpi = cpi_groceries$cpi[1]
 grocery_month_cost <- grocery_month_summary %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_line(aes(text = paste0("<b>", format(month, "%B %Y"), "</b><br>Expenditure: ", 
@@ -228,10 +229,10 @@ grocery_month_cost <- grocery_month_summary %>%
                 group = 1),
             col = "blue") +
   geom_line(data = cpi_groceries, aes(x = as.Date(year_month), 
-                                      y = (cpi / 100) * median(grocery_month_summary$cost),
+                                      y = (cpi / start_cpi) * median(grocery_month_summary$cost),
                                       text = paste0("<b>", format(year_month, "%B %Y"), 
                                                     "</b><br>CPI (scaled): ", 
-                                                    dollar((cpi / 100) * median(grocery_month_summary$cost))), 
+                                                    dollar((cpi / start_cpi) * median(grocery_month_summary$cost))), 
                                       group = 1), 
             col = "orange") +
   geom_smooth(method = "lm", formula = "y ~ x", se = FALSE,
@@ -693,7 +694,7 @@ ggplotly(utilities_qtr_cost_plot, tooltip = "text") %>%
 ```
 
 ## Overall Monthly Expenses
-Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start.
+Putting it all together, we will now plot all our major sources of expense together. Grocery totals will only include completed months, while credit cards and utilities may be incomplete for the current month. Note that while groceries are plotted separately, they are a part of the credit card expenses, and thus the total is not a sum of all the lines (doing so would double-count groceries). We only have insurance data going back to May 2025, so that is where this plot will start. Homeowner's insurance is included in `Rent` (starting in March 2026) rather than separating out from the mortgage bill.
 
 **ADD TITHING EXPENSES**
 ```{r insurance-data, include=FALSE}
