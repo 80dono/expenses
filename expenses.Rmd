@@ -283,9 +283,7 @@ grocery %>%
             mean_items = format(round(mean(items), 2), nsmall = 2),
             sd_items = format(round(sd(items), 2), nsmall = 2), 
             mean_cost = format(round(mean(cost), 2), nsmall = 2), 
-            mean_cost_per_item = format(round(sum(cost) / sum(items), 2), nsmall = 2),
-            min_cost = format(min(cost), nsmall = 2), 
-            max_cost = format(max(cost), nsmall = 2)) %>% 
+            mean_cost_per_item = format(round(sum(cost) / sum(items), 2), nsmall = 2)) %>% 
   arrange(desc(trips)) %>% 
   datatable()
 
@@ -797,9 +795,7 @@ income_plot <- income_total %>%
   geom_line() +
   geom_point(size = 0.5) +
   scale_y_log10() +
-  scale_color_manual(values = c(income_palette[1], income_palette[2], income_palette[3],
-                                income_palette[4], income_palette[5], income_palette[6],
-                                income_palette[7], "black")) +
+  scale_color_manual(values = c(income_palette, "black")) +
   labs(title = "Total Income",
        x = "Date",
        y = "Income ($)",
@@ -820,9 +816,7 @@ income_month <- income %>%
 #                income_palette[4], income_palette[5], income_palette[6],
 #                income_palette[7], "black", "red")
 # names(color_map) <- c(levels(income_total$source), "Expenses")
-color_map <- c(income_palette[1], income_palette[2], income_palette[3],
-               income_palette[4], income_palette[5], income_palette[6],
-               income_palette[7], "black")
+color_map <- c(income_palette, "black")
 
 income_plot_month <- income_month %>% 
   ggplot(aes(x = month, y = amount, col = source, group = source, 
