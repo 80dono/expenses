@@ -156,24 +156,49 @@ The R-squared value for the third-order polynomial fit in the plot above is `r r
 #### Grocery Expenses by Month
 We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past year, but all other plots include data going back to January 2025.
 
-```{r grocery-month}
-mean_monthly_cost <- mean(summarize(group_by(grocery_1year, month), 
+```{r grocery-month-1year}
+mean_monthly_cost_1year <- mean(summarize(group_by(grocery_1year, month), 
                                     cost = sum(cost),
                                     .groups = "drop")$cost)
 grocery_1year %>% 
   group_by(year, month) %>% 
   ggplot(aes(x = month, y = cost)) +
   geom_col(aes(fill = store_label)) +
-  geom_hline(yintercept = mean_monthly_cost,
+  geom_hline(yintercept = mean_monthly_cost_1year,
              linetype = "dashed", linewidth = 1.5) +
-  annotate("label", x = min(grocery_1year$month) - days(14), y = mean_monthly_cost, 
-           label = round(mean_monthly_cost, 2)) +
+  annotate("label", x = min(grocery_1year$month) - days(14), y = mean_monthly_cost_1year, 
+           label = round(mean_monthly_cost_1year, 2)) +
   scale_x_date(breaks = "1 month", date_labels = "%b\n%Y") +
   # scale_y_continuous(n.breaks = 10) +
   labs(title = "Grocery Expenses by Month",
        x = NULL,
        y = "Expenditure ($)",
        fill = NULL) +
+  theme(axis.line = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_text(margin = margin(t = -10)))
+```
+
+Now we will look at the monthly grocery expenses since we began tracking so we can look for seasonal patterns. We will not break down by store in order to avoid cluttering the graph.
+
+```{r grocery-month-overall}
+mean_monthly_cost <- mean(summarize(group_by(grocery, month), 
+                                    cost = sum(cost),
+                                    .groups = "drop")$cost)
+grocery %>% 
+  group_by(year, month) %>% 
+  ggplot(aes(x = month, y = cost)) +
+  # Color by month or year to make grouping easier to pick out?
+  geom_col(fill = "blue") +
+  geom_hline(yintercept = mean_monthly_cost,
+             linetype = "dashed", linewidth = 1.5) +
+  annotate("label", x = min(grocery$month) - days(14), y = mean_monthly_cost, 
+           label = round(mean_monthly_cost, 2)) +
+  scale_x_date(breaks = "3 months", date_labels = "%b\n%Y") +
+  # scale_y_continuous(n.breaks = 10) +
+  labs(title = "Grocery Expenses by Month",
+       x = NULL,
+       y = "Expenditure ($)") +
   theme(axis.line = element_blank(),
         axis.ticks.x = element_blank(),
         axis.text.x = element_text(margin = margin(t = -10)))
@@ -493,6 +518,8 @@ ggplotly(cc_cost_plot, tooltip = "text") %>%
   layout(legend = list(x = 0.45, xanchor = "center", y = -0.1,
                        orientation = "h"))
 ```
+
+The spike in the USAA credit card for June 2026 is due to a $5,000 expense covering our air conditioner replacement.
 
 ## Utilities
 We will now examine the costs associated with utilities -- specifically, electricity, water, Internet, and cell phone. Unlike groceries and most other expenses, utilities are paid directly from our bank account (to avoid the processing fee). Water is billed on a quarterly schedule, while the rest are billed monthly. Internet is a fixed cost each month, while the others vary. All utilities except electricity are billed at the beginning of the following month; electricity is billed at the end of the month (billing periods do not fully overlap with calendar months).
