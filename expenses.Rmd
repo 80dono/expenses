@@ -151,7 +151,7 @@ grocery_week_trips_cost <- grocery_week_summary %>%
 ggplotly(grocery_week_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the third-order polynomial fit in the plot above is `r round(r2_week, 2)`.
+The R-squared value for the third-order polynomial fit in the plot above is **`r round(r2_week, 2)`**.
 
 #### Grocery Expenses by Month
 We will now repeat each plot, this time aggregating over a month instead of week. The bar chart only includes data for the past year, but all other plots include data going back to January 2025.
@@ -181,7 +181,7 @@ grocery_1year %>%
 
 Now we will look at the monthly grocery expenses since we began tracking so we can look for seasonal patterns. We will not break down by store in order to avoid cluttering the graph.
 
-```{r grocery-month-overall}
+```{r grocery-month-overall, out.width="100%"}
 mean_monthly_cost <- mean(summarize(group_by(grocery, month), 
                                     cost = sum(cost),
                                     .groups = "drop")$cost)
@@ -191,7 +191,7 @@ grocery %>%
   # Color by month or year to make grouping easier to pick out?
   geom_col(fill = "blue") +
   geom_hline(yintercept = mean_monthly_cost,
-             linetype = "dashed", linewidth = 1.5) +
+             linetype = "dashed", linewidth = 1) +
   annotate("label", x = min(grocery$month) - days(14), y = mean_monthly_cost, 
            label = round(mean_monthly_cost, 2)) +
   scale_x_date(breaks = "3 months", date_labels = "%b\n%Y") +
@@ -296,7 +296,7 @@ grocery_month_trips_cost <- grocery_month_summary %>%
 ggplotly(grocery_month_trips_cost, tooltip = "text") # Need to re-add R-squared subtitle!
 ```
 
-The R-squared value for the third-order polynomial fit in the plot above is `r round(r2_month, 2)`.
+The R-squared value for the third-order polynomial fit in the plot above is **`r round(r2_month, 2)`**.
 
 ### Grocery Expenses by Store
 The table below is sorted in descending order by number of trips.
@@ -621,7 +621,7 @@ ggplotly(utilities_monthly_cost_plot, tooltip = "text") %>%
                        orientation = "h"))
 ```
 
-Note: there was no electricity bill for February 2026 as it did not fall within the 32-34-day billing cycle; electricity usage for that month is reflected in the March 2026 bill (on 3/3/2026).
+Note: there is no electricity bill for February 2026 as it did not fall within the 32-34-day billing cycle; electricity usage for that month is reflected in the March 2026 bill (on 3/3/2026).
 
 ### Utility Expenses by Quarter
 Alternatively, instead of artificially converting water to a monthly expense, we can aggregate the other utilities to match the quarterly scale. We lose detail (particularly for electricity) in this approach but gain a better understanding of the true overall trend for all utilities with this standard basis of comparison.
@@ -793,6 +793,15 @@ income_sheet <- get_income_data(authenticated)
 income <- format_date(income_sheet) %>% 
   filter(month > as.Date("2025-04-01")) %>% 
   mutate(source = as.factor(source))
+
+# Add in zero values for categories with no income that month
+sporadic_sources = c("Casanel", "Gift", "Herald Reimbursement", "Other")
+blank_months <- data.frame(month = rep(seq(min(income$month), today(), by = "1 month"), length(sporadic_sources)),
+                           amount = 0.001,
+                           source = sporadic_sources,
+                           inputs = 0) %>% 
+  anti_join(income, by = c("month", "source")) %>% 
+  mutate(year = year(month))
 ```
 
 ```{r income-total}
@@ -811,25 +820,6 @@ income_total$source <- factor(income_total$source,
 income_palette <- hue_pal()(length(levels(income_total$source)) - 1)
 ```
 
-<!--- The plot below shows income based on the date it was received (no time grouping). Note that the *y*-axis is on a logarithmic (base 10) scale to show greater detail at both lower income amounts (e.g. gifts, reimbursements) and higher amounts (paychecks). --->
-
-```{r plot-income-total, eval=FALSE}
-# Total not on monthly scale
-income_plot <- income_total %>% 
-  ggplot(aes(x = date, y = amount, col = source, group = source, 
-             text = paste0("<b>", source, "</b><br><i>", date, 
-                           "</i><br>Amount: ", dollar(amount)))) +
-  geom_line() +
-  geom_point(size = 0.5) +
-  scale_y_log10() +
-  scale_color_manual(values = c(income_palette, "black")) +
-  labs(title = "Total Income",
-       x = "Date",
-       y = "Income ($)",
-       col = "Income Source")
-ggplotly(income_plot, tooltip = "text")
-```
-
 We will display income by month to better contextualize what is encompassed by the total. Due to biweekly (rather than monthly) paychecks, the total will fluctuate intermittently. The *y*-axis is on a logarithmic (base 10) scale to show greater detail at both lower income amounts (e.g. gifts, reimbursements) and higher amounts (paychecks).
 
 ```{r monthly-income, warning=FALSE, out.width="100%"}
@@ -846,6 +836,7 @@ income_month <- income %>%
 color_map <- c(income_palette, "black")
 
 income_plot_month <- income_month %>% 
+  bind_rows(blank_months) %>% 
   ggplot(aes(x = month, y = amount, col = source, group = source, 
              text = paste0("<b>", source, "</b><br><i>", format(month, "%B %Y"), 
                            "</i><br>Amount: ", dollar(amount), "<br>Inputs: ", inputs))) +
